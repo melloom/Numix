@@ -165,8 +165,8 @@ body[data-theme="dark"] {
 
 /* ===== MOBILE-FIRST RESPONSIVE DESIGN ===== */
 
-/* Extra small devices (phones, less than 576px) */
-@media (max-width: 575.98px) {
+/* Extra small devices (phones, less than 576px) - Changed to 600px to include more mobile sizes */
+@media (max-width: 599.98px) {
   :root {
     --mobile-padding: 0.75rem;
     --mobile-gap: 0.5rem;
@@ -190,25 +190,61 @@ body[data-theme="dark"] {
     max-height: calc(100 * var(--vh));
     border-radius: 0;
     box-shadow: none;
-    padding: max(var(--safe-area-inset-top), 0.75rem) 1rem max(var(--safe-area-inset-bottom), 0.75rem) 1rem;
+    padding: max(var(--safe-area-inset-top), 0.5rem) 1rem max(var(--safe-area-inset-bottom), 0.5rem) 1rem;
     margin: 0;
     border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
-  
-  /* Optimize button sizes for mobile */
-  .keypad-btn {
-    min-height: var(--touch-target-min);
-    font-size: 1.1em;
-    padding: 0.75rem 0.5rem;
-    border-radius: 0.75rem;
-  }
-  
+
+  /* Make the display bigger for better mobile experience */
   .modern-display {
-    padding: 1rem 0.875rem 0.75rem 0.875rem;
-    min-height: 70px;
+    padding: 0.75rem 0.875rem 0.5rem 0.875rem;
+    min-height: 100px;
     border-radius: 0.875rem;
+    flex-shrink: 0;
   }
-  
+
+  /* Improve keypad spacing and sizing */
+  .modern-keypad {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 0.6rem;
+    min-height: 0;
+  }
+
+  /* Optimize button sizes for mobile - make them fill available space */
+  .keypad-btn {
+    min-height: calc((100vh - 220px) / 6); /* Dynamic height based on screen */
+    min-height: calc((100 * var(--vh) - 220px) / 6);
+    max-height: 80px; /* Prevent buttons from being too tall */
+    font-size: 1.2em;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+  }
+
+  /* Header adjustments for mobile */
+  .calculator-header {
+    flex-shrink: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  .calc-tabs {
+    gap: 0.2rem;
+  }
+
+  .calc-tab {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+  }
+
   /* Make popup fixed and full-width on mobile */
   .calc-mode-popup {
     position: fixed !important;
@@ -221,11 +257,17 @@ body[data-theme="dark"] {
   }
 }
 
-/* Small devices (landscape phones, 576px and up) */
-@media (min-width: 576px) and (max-width: 767.98px) {
+/* Small devices (landscape phones, 600px and up) */
+@media (min-width: 600px) and (max-width: 767.98px) {
   .calculator-container {
     max-width: 420px;
     padding: 1.25rem;
+    height: auto;
+    max-height: calc(100vh - 2rem);
+  }
+  
+  .modern-display {
+    min-height: 110px;
   }
 }
 
@@ -396,7 +438,7 @@ body, html, #root {
   box-sizing: border-box;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 599.98px) {
   html, body, #root {
     min-height: 100%;
     height: 100%;
@@ -504,7 +546,7 @@ body[data-theme="dark"] .calc-tab:not(.active):not(:disabled):hover {
   background: rgba(255,255,255,0.85);
   border-radius: 1.1rem;
   padding: 1.3rem 1.1rem 0.9rem 1.1rem;
-  min-height: 80px;
+  min-height: 120px;
   margin-bottom: 0.5rem;
   box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1.5px 4px rgba(99,102,241,0.04);
   display: flex;
@@ -1971,17 +2013,21 @@ body[data-theme="dark"] .cancel-button:hover {
 /* Mobile responsive adjustments */
 @media (max-width: 480px) {
   .pwa-install-prompt {
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0;
   }
   
   .pwa-install-content {
-    padding: 18px 20px;
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-    border-radius: 16px;
+    padding: 24px 20px;
+    border-radius: 20px 20px 0 0;
+    gap: 20px;
+    margin: 0;
+    min-height: auto;
+    box-shadow: 
+      0 -10px 40px rgba(0, 0, 0, 0.4),
+      0 -4px 16px rgba(99, 102, 241, 0.3);
   }
   
   .pwa-install-icon-container {
@@ -1989,26 +2035,75 @@ body[data-theme="dark"] .cancel-button:hover {
     height: 50px;
   }
   
+  .pwa-install-text {
+    text-align: center;
+  }
+  
+  .pwa-install-text h3 {
+    font-size: 18px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  
+  .pwa-install-text p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .pwa-install-buttons {
+    width: 100%;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pwa-install-btn,
+  .pwa-dismiss-btn {
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 14px;
+    justify-content: center;
+  }
+  
+  .pwa-install-btn {
+    order: 1;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 
+      0 6px 20px rgba(251, 191, 36, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  .pwa-dismiss-btn {
+    order: 2;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 360px) {
+  .pwa-install-content {
+    padding: 20px 16px;
+  }
+  
   .pwa-install-text h3 {
     font-size: 16px;
-    justify-content: center;
   }
   
   .pwa-install-text p {
     font-size: 13px;
   }
   
-  .pwa-install-buttons {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  
   .pwa-install-btn,
   .pwa-dismiss-btn {
-    flex: 1;
-    min-width: 120px;
-    max-width: 140px;
+    padding: 14px 20px;
+    font-size: 15px;
   }
 }
 
@@ -2113,5 +2208,308 @@ body[data-theme="dark"] .pwa-floating-install:hover {
     right: 15px;
     width: 48px;
     height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pwa-floating-install {
+    bottom: 20px;
+    right: 20px;
+    width: 64px;
+    height: 64px;
+    box-shadow: 
+      0 8px 24px rgba(99, 102, 241, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .pwa-floating-install.mobile {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 16px;
+    width: auto;
+    min-width: 64px;
+    height: auto;
+    min-height: 64px;
+  }
+  
+  .install-tooltip {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    text-align: center;
+    line-height: 1;
+    margin-top: 2px;
+  }
+}
+
+/* Improve floating button animations on mobile */
+.pwa-floating-install.mobile {
+  animation: floatIn 0.5s ease-out, mobilePulse 3s ease-in-out infinite 2s;
+}
+
+@keyframes mobilePulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 
+      0 8px 24px rgba(99, 102, 241, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.15),
+      0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 
+      0 12px 32px rgba(99, 102, 241, 0.5),
+      0 6px 16px rgba(0, 0, 0, 0.2),
+      0 0 0 8px rgba(99, 102, 241, 0.15);
+  }
+}
+
+/* iOS Install Banner */
+.ios-install-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+  color: white;
+  z-index: 1001;
+  animation: slideDownBanner 0.4s ease-out;
+  padding: env(safe-area-inset-top) 0 0 0;
+}
+
+.ios-banner-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.ios-banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ios-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ios-banner-text strong {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ios-banner-text span {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.ios-banner-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.ios-banner-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideDownBanner {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Adjust calculator container when iOS banner is shown */
+body.ios-banner-shown .calculator-container {
+  margin-top: 60px;
+}
+
+/* Tablet portrait mode and larger mobile devices */
+@media (min-width: 600px) and (max-width: 767.98px) {
+  .app-bg {
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  .calculator-container {
+    max-width: 420px;
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 2rem);
+    border-radius: 1.5rem;
+    box-shadow: 
+      0 4px 32px 0 rgba(31, 38, 135, 0.12), 
+      0 1.5px 4px 0 rgba(0,0,0,0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-light);
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+  
+  .modern-display {
+    min-height: 110px;
+    padding: 1rem 1rem 0.75rem 1rem;
+  }
+  
+  .keypad-btn {
+    min-height: 50px;
+    font-size: 1.1em;
+    padding: 0.75rem;
+  }
+  
+  .modern-keypad {
+    gap: 0.75rem;
+  }
+}
+
+/* Specific optimization for 574x761 and similar intermediate tablet sizes */
+@media (min-width: 550px) and (max-width: 599.98px) and (min-height: 700px) {
+  .app-bg {
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    min-height: 100vh;
+    height: 100vh;
+  }
+  
+  .calculator-container {
+    max-width: 90%;
+    width: 100%;
+    height: 95vh;
+    max-height: 95vh;
+    border-radius: 1.25rem;
+    box-shadow: 
+      0 4px 32px 0 rgba(31, 38, 135, 0.12), 
+      0 1.5px 4px 0 rgba(0,0,0,0.04),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-light);
+    padding: 0.75rem;
+    gap: 0.5rem;
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  
+  .modern-display {
+    min-height: 80px;
+    max-height: 80px;
+    padding: 0.75rem 1rem 0.5rem 1rem;
+    border-radius: 1rem;
+    flex-shrink: 0;
+    margin-bottom: 0.25rem;
+  }
+  
+  .keypad-btn {
+    min-height: calc((95vh - 200px) / 5);
+    max-height: none;
+    font-size: 1.1em;
+    padding: 0;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-weight: 600;
+  }
+  
+  .modern-keypad {
+    gap: 0.3rem;
+    grid-template-rows: repeat(5, 1fr);
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .calculator-header {
+    margin-bottom: 0.125rem;
+    flex-shrink: 0;
+    height: auto;
+  }
+  
+  .calc-tab {
+    padding: 0.15rem 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Portrait orientation optimization for medium-sized devices */
+@media (min-width: 550px) and (max-width: 650px) and (orientation: portrait) {
+  .app-bg {
+    min-height: 100vh;
+    height: 100vh;
+    padding: 0.5rem;
+  }
+  
+  .calculator-container {
+    max-width: 95%;
+    height: 95vh;
+    max-height: 95vh;
+    padding: 0.75rem;
+    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  
+  .modern-display {
+    min-height: 80px;
+    max-height: 80px;
+    flex-shrink: 0;
+    margin-bottom: 0.25rem;
+  }
+  
+  .keypad-btn {
+    min-height: calc((95vh - 200px) / 5);
+    max-height: none;
+    font-size: 1.1em;
+    padding: 0;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-weight: 600;
+  }
+  
+  .modern-keypad {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 0.3rem;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  .calculator-header {
+    margin-bottom: 0.125rem;
+    flex-shrink: 0;
+    height: auto;
   }
 }

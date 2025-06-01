@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import Calculator from "./components/Calculator";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import PWAFloatingInstall from "./components/PWAFloatingInstall";
+import iOSInstallBanner from "./components/iOSInstallBanner";
 import "./App.css";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
 
   return (
     <div className="app-bg">
+      <iOSInstallBanner />
       <Calculator />
       <PWAInstallPrompt />
       <PWAFloatingInstall />

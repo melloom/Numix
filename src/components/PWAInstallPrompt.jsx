@@ -5,8 +5,20 @@ import SparkleIcon from './icons/SparkleIcon';
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      console.log('Mobile device detected:', mobile);
+      console.log('User agent:', navigator.userAgent);
+      return mobile;
+    };
+
+    const isMobileDevice = checkMobile();
+
     const handleBeforeInstallPrompt = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
@@ -14,6 +26,7 @@ const PWAInstallPrompt = () => {
       setDeferredPrompt(e);
       // Show the install prompt
       setShowInstallPrompt(true);
+      console.log('PWA install prompt ready');
     };
 
     const handleAppInstalled = () => {
@@ -25,9 +38,38 @@ const PWAInstallPrompt = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
+    // Listen for test force prompt
+    const handleForcePWAPrompt = () => {
+      console.log('Force PWA prompt triggered');
+      setShowInstallPrompt(true);
+    };
+    
+    window.addEventListener('force-pwa-prompt', handleForcePWAPrompt);
+
+    // For mobile devices, show install prompt after a delay if not dismissed recently
+    if (isMobileDevice) {
+      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      const dismissedTime = dismissed ? parseInt(dismissed) : 0;
+      const oneDay = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+      
+      console.log('Mobile device - checking dismiss status:', { dismissed, dismissedTime });
+      
+      if (!dismissed || Date.now() - dismissedTime > oneDay) {
+        console.log('Scheduling mobile PWA prompt in 3 seconds...');
+        setTimeout(() => {
+          // Force show prompt on mobile for testing
+          setShowInstallPrompt(true);
+          console.log('Showing mobile PWA prompt NOW');
+        }, 3000); // Show after 3 seconds on mobile
+      } else {
+        console.log('PWA prompt dismissed recently, not showing');
+      }
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener('force-pwa-prompt', handleForcePWAPrompt);
     };
   }, []);
 
@@ -48,6 +90,10 @@ const PWAInstallPrompt = () => {
       // Clear the deferred prompt
       setDeferredPrompt(null);
       setShowInstallPrompt(false);
+    } else if (isMobile) {
+      // For mobile devices without native prompt, show instructions
+      alert('To install this app:\n\n• Safari (iOS): Tap Share → Add to Home Screen\n• Chrome (Android): Tap Menu → Install App or Add to Home Screen');
+      setShowInstallPrompt(false);
     }
   };
 
@@ -57,17 +103,19 @@ const PWAInstallPrompt = () => {
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
-  // Don't show if recently dismissed
+  // Don't show if recently dismissed (except for forced mobile show)
   useEffect(() => {
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed);
-      const oneWeek = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
-      if (Date.now() - dismissedTime < oneWeek) {
-        setShowInstallPrompt(false);
+    if (!isMobile) {
+      const dismissed = localStorage.getItem('pwa-install-dismissed');
+      if (dismissed) {
+        const dismissedTime = parseInt(dismissed);
+        const oneWeek = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
+        if (Date.now() - dismissedTime < oneWeek) {
+          setShowInstallPrompt(false);
+        }
       }
     }
-  }, []);
+  }, [isMobile]);
 
   if (!showInstallPrompt) {
     return null;
@@ -77,7 +125,7 @@ const PWAInstallPrompt = () => {
     <div className="pwa-install-prompt">
       <div className="pwa-install-content">
         <div className="pwa-install-icon-container">
-          <InstallIcon size={32} className="pwa-install-main-icon" />
+          <InstallIcon size={isMobile ? 28 : 32} className="pwa-install-main-icon" />
           <SparkleIcon size={14} className="pwa-sparkle-1" />
           <SparkleIcon size={10} className="pwa-sparkle-2" />
           <SparkleIcon size={12} className="pwa-sparkle-3" />
@@ -87,7 +135,7 @@ const PWAInstallPrompt = () => {
             Install Numix 
             <SparkleIcon size={16} className="pwa-title-sparkle" />
           </h3>
-          <p>Get the full app experience with offline access, faster loading, and native app features!</p>
+          <p>{isMobile ? 'Add to your home screen for quick access!' : 'Get the full app experience with offline access, faster loading, and native app features!'}</p>
         </div>
         <div className="pwa-install-buttons">
           <button onClick={handleInstallClick} className="pwa-install-btn">
@@ -96,10 +144,10 @@ const PWAInstallPrompt = () => {
               <polyline points="7,10 12,15 17,10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Install App
+            {isMobile ? 'Add to Home' : 'Install App'}
           </button>
           <button onClick={handleDismiss} className="pwa-dismiss-btn">
-            Maybe Later
+            {isMobile ? 'Not Now' : 'Maybe Later'}
           </button>
         </div>
       </div>
