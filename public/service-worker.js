@@ -1,12 +1,13 @@
-const CACHE_NAME = "numix-calc-v1.2";
-const STATIC_CACHE = "numix-static-v1.2";
-const DYNAMIC_CACHE = "numix-dynamic-v1.2";
+const CACHE_NAME = "numix-calc-v2.0";
+const STATIC_CACHE = "numix-static-v2.0";
+const DYNAMIC_CACHE = "numix-dynamic-v2.0";
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
+  "/favicon.ico",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png"
 ];
@@ -24,6 +25,9 @@ self.addEventListener("install", (event) => {
       .then(() => {
         console.log("Service Worker: Skip waiting");
         return self.skipWaiting();
+      })
+      .catch((error) => {
+        console.error("Service Worker: Cache failed", error);
       })
   );
 });
@@ -53,7 +57,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch event - cache strategy
+// Fetch event - improved cache strategy
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -62,16 +66,68 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.protocol === "chrome-extension:") {
     return;
   }
+
+  // Skip requests to different origins unless they're for assets
+  if (url.origin !== location.origin && !isStaticAsset(request.url)) {
+    return;
+  }
   
-  // Handle navigation requests (HTML pages)
+  // Handle navigation requests (HTML pages) - FIX WHITE SCREEN
   if (request.mode === "navigate") {
     event.respondWith(
-      caches.match("/index.html")
+      fetch(request)
         .then((response) => {
-          return response || fetch(request);
+          // If fetch succeeds, return the response and cache it
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
         })
         .catch(() => {
-          return caches.match("/index.html");
+          // If fetch fails, try to serve from cache
+          return caches.match("/index.html")
+            .then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // Last resort: create a basic HTML response
+              return new Response(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Numix Calculator</title>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    body { 
+                      font-family: system-ui; 
+                      display: flex; 
+                      align-items: center; 
+                      justify-content: center; 
+                      height: 100vh; 
+                      margin: 0; 
+                      background: linear-gradient(135deg, #e5e9f2 0%, #c7d2fe 100%);
+                    }
+                    .loading { text-align: center; }
+                  </style>
+                </head>
+                <body>
+                  <div class="loading">
+                    <h1>Numix Calculator</h1>
+                    <p>Loading... Please check your connection.</p>
+                  </div>
+                  <script>
+                    setTimeout(() => window.location.reload(), 2000);
+                  </script>
+                </body>
+                </html>
+              `, {
+                headers: { 'Content-Type': 'text/html' }
+              });
+            });
         })
     );
     return;
@@ -82,20 +138,26 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches.match(request)
         .then((response) => {
-          return response || fetch(request).then((fetchResponse) => {
-            return caches.open(STATIC_CACHE).then((cache) => {
-              if (fetchResponse.status === 200) {
-                cache.put(request, fetchResponse.clone());
-              }
-              return fetchResponse;
-            });
+          if (response) {
+            return response;
+          }
+          return fetch(request).then((fetchResponse) => {
+            // Only cache successful responses
+            if (fetchResponse.status === 200) {
+              const responseClone = fetchResponse.clone();
+              caches.open(STATIC_CACHE).then((cache) => {
+                cache.put(request, responseClone);
+              });
+            }
+            return fetchResponse;
           });
         })
         .catch(() => {
-          // Return offline fallback for important assets
+          // Return empty response for missing assets
           if (request.url.includes("/icons/")) {
-            return new Response("", { status: 200 });
+            return new Response("", { status: 404 });
           }
+          return new Response("", { status: 404 });
         })
     );
     return;
@@ -123,11 +185,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   
-  // Default: try cache first, then network
+  // Default: Network first, then cache
   event.respondWith(
-    caches.match(request)
+    fetch(request)
       .then((response) => {
-        return response || fetch(request);
+        return response;
+      })
+      .catch(() => {
+        return caches.match(request);
       })
   );
 });
@@ -140,7 +205,10 @@ function isStaticAsset(url) {
          url.includes(".css") || 
          url.includes(".png") || 
          url.includes(".jpg") || 
-         url.includes(".ico");
+         url.includes(".ico") ||
+         url.includes(".svg") ||
+         url.includes(".woff") ||
+         url.includes(".woff2");
 }
 
 function isApiRequest(url) {
@@ -186,4 +254,11 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     clients.openWindow("/")
   );
+});
+
+// Handle messages from the main thread
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

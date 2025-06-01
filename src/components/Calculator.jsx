@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import Display from "./Display";
 import Keypad from "./Keypad";
 import ThemeSwitcher from "./ThemeSwitcher";
-import MusicPlayer from "./MusicPlayer";
 import { calculate } from "../utils/calculatorLogic.js";
 import { 
   validateInput, 
@@ -452,9 +451,6 @@ function Calculator() {
   // Pass modal control props to all calculators
   return (
     <div className="calculator-container" style={{ position: "relative" }}>
-      {/* Music Player - shows when connected, supports Spotify and Apple Music */}
-      <MusicPlayer />
-      
       <div className="calculator-header">
         <div className="theme-tabs">
           <button

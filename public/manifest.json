@@ -4,12 +4,14 @@
   "description": "Professional calculator with scientific, programming, graphing, and conversion tools",
   "start_url": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "orientation": "portrait-primary",
   "theme_color": "#232946",
   "background_color": "#232946",
   "categories": ["productivity", "utilities", "education"],
   "lang": "en",
   "scope": "./",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -60,7 +62,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "favicon.ico",
+      "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     }
@@ -87,5 +89,10 @@
       "url": "./?mode=converter",
       "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     }
-  ]
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "related_applications": [],
+  "protocol_handlers": []
 }

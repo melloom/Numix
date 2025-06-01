@@ -10,7 +10,6 @@ class PWAManager {
     this.isStandalone = false;
     this.isIOS = false;
     this.isAndroid = false;
-    this.installPromptDismissed = false;
     
     this.init();
   }
@@ -21,44 +20,9 @@ class PWAManager {
   init() {
     this.detectPlatform();
     this.checkInstallStatus();
-    this.loadPromptPreferences();
     this.setupEventListeners();
     this.setupViewportHandler();
     this.setupOrientationHandler();
-  }
-  
-  /**
-   * Load prompt preferences from localStorage
-   */
-  loadPromptPreferences() {
-    try {
-      const preferences = localStorage.getItem('pwa-install-preferences');
-      if (preferences) {
-        const parsed = JSON.parse(preferences);
-        // Don't show prompt if user dismissed it recently (within 7 days)
-        const dismissTime = parsed.dismissedAt;
-        const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-        this.installPromptDismissed = dismissTime > weekAgo;
-      }
-    } catch (error) {
-      console.error('Error loading prompt preferences:', error);
-    }
-  }
-  
-  /**
-   * Save prompt preferences
-   */
-  savePromptPreferences(action) {
-    try {
-      const preferences = {
-        action,
-        dismissedAt: Date.now(),
-        userAgent: navigator.userAgent.substring(0, 50)
-      };
-      localStorage.setItem('pwa-install-preferences', JSON.stringify(preferences));
-    } catch (error) {
-      console.error('Error saving prompt preferences:', error);
-    }
   }
   
   /**
@@ -103,14 +67,7 @@ class PWAManager {
       console.log('beforeinstallprompt fired');
       e.preventDefault();
       this.deferredPrompt = e;
-      
-      // Only show prompt if not dismissed recently and not already installed
-      if (!this.installPromptDismissed && !this.isInstalled) {
-        // Delay showing prompt to avoid immediate interruption
-        setTimeout(() => {
-          this.showInstallPrompt();
-        }, 3000);
-      }
+      this.showInstallPrompt();
     });
     
     // Listen for app installed event
@@ -119,7 +76,6 @@ class PWAManager {
       this.isInstalled = true;
       this.hideInstallPrompt();
       this.showInstallSuccessMessage();
-      this.savePromptPreferences('installed');
     });
     
     // Listen for visibility change (app focus/blur)
@@ -193,24 +149,20 @@ class PWAManager {
    * Show installation prompt
    */
   showInstallPrompt() {
-    if (this.isInstalled || !this.canInstall() || this.installPromptDismissed) return;
+    if (this.isInstalled || !this.canInstall()) return;
     
-    // Don't show if already showing
-    if (document.getElementById('pwa-install-banner')) return;
+    // Check if user has previously dismissed the prompt
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    if (dismissed === 'true') return;
     
     // Create install prompt UI
     const installBanner = this.createInstallBanner();
     document.body.appendChild(installBanner);
     
-    // Auto-hide after 8 seconds if not interacted with
-    const autoHideTimeout = setTimeout(() => {
-      if (document.getElementById('pwa-install-banner')) {
-        this.dismissInstallPrompt('auto-timeout');
-      }
+    // Auto-hide after 8 seconds (reduced from 10)
+    setTimeout(() => {
+      this.hideInstallPrompt();
     }, 8000);
-    
-    // Store timeout reference for cleanup
-    installBanner.dataset.autoHideTimeout = autoHideTimeout;
   }
   
   /**
@@ -223,17 +175,13 @@ class PWAManager {
     
     banner.innerHTML = `
       <div class="install-banner-content">
-        <div class="install-banner-left">
-          <div class="install-banner-icon">📱</div>
-          <div class="install-banner-text">
-            <strong>Add to Home Screen</strong>
-            <p>Install Numix for quick access</p>
-          </div>
+        <div class="install-banner-icon">📱</div>
+        <div class="install-banner-text">
+          <strong>Install Numix Calculator</strong>
+          <p>Add to home screen for quick access</p>
         </div>
-        <div class="install-banner-actions">
-          <button class="install-banner-btn" id="install-btn">Install</button>
-          <button class="install-banner-close" id="install-close" title="Close">×</button>
-        </div>
+        <button class="install-banner-btn" id="install-btn">Install</button>
+        <button class="install-banner-close" id="install-close" title="Dismiss">×</button>
       </div>
     `;
     
@@ -243,51 +191,33 @@ class PWAManager {
       top: max(env(safe-area-inset-top), 1rem);
       left: 1rem;
       right: 1rem;
-      background: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+      background: linear-gradient(135deg, #232946 0%, #3730a3 100%);
       color: white;
       border-radius: 0.75rem;
-      padding: 0.75rem 1rem;
-      box-shadow: 0 4px 20px rgba(29, 185, 84, 0.3), 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
       z-index: 1000;
-      animation: slideDownBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      max-width: 400px;
-      margin: 0 auto;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      animation: slideDown 0.3s ease-out;
     `;
     
     // Add event listeners
-    const installBtn = banner.querySelector('#install-btn');
-    const closeBtn = banner.querySelector('#install-close');
-    
-    installBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
+    banner.querySelector('#install-btn').addEventListener('click', () => {
       this.triggerInstall();
     });
     
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.dismissInstallPrompt('user-close');
-    });
-    
-    // Clear auto-hide timeout on user interaction
-    banner.addEventListener('mouseenter', () => {
-      const timeoutId = parseInt(banner.dataset.autoHideTimeout);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+    banner.querySelector('#install-close').addEventListener('click', () => {
+      this.dismissInstallPrompt();
     });
     
     return banner;
   }
   
   /**
-   * Dismiss installation prompt
+   * Dismiss install prompt permanently
    */
-  dismissInstallPrompt(reason = 'user-dismiss') {
-    this.installPromptDismissed = true;
-    this.savePromptPreferences(reason);
+  dismissInstallPrompt() {
+    // Remember user's choice to dismiss
+    localStorage.setItem('pwa-install-dismissed', 'true');
     this.hideInstallPrompt();
   }
   
@@ -297,18 +227,8 @@ class PWAManager {
   hideInstallPrompt() {
     const banner = document.getElementById('pwa-install-banner');
     if (banner) {
-      // Clear any auto-hide timeout
-      const timeoutId = parseInt(banner.dataset.autoHideTimeout);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      banner.style.animation = 'slideUpFade 0.3s ease-out forwards';
-      setTimeout(() => {
-        if (banner.parentNode) {
-          banner.remove();
-        }
-      }, 300);
+      banner.style.animation = 'slideUp 0.3s ease-out';
+      setTimeout(() => banner.remove(), 300);
     }
   }
   
@@ -316,13 +236,7 @@ class PWAManager {
    * Trigger PWA installation
    */
   async triggerInstall() {
-    if (!this.deferredPrompt) {
-      // Show iOS instructions if on iOS
-      if (this.isIOS) {
-        this.showIOSInstallInstructions();
-      }
-      return false;
-    }
+    if (!this.deferredPrompt) return false;
     
     try {
       this.deferredPrompt.prompt();
@@ -332,17 +246,12 @@ class PWAManager {
       
       if (outcome === 'accepted') {
         this.hideInstallPrompt();
-        this.savePromptPreferences('accepted');
-      } else {
-        this.savePromptPreferences('declined');
-        this.installPromptDismissed = true;
       }
       
       this.deferredPrompt = null;
       return outcome === 'accepted';
     } catch (error) {
       console.error('Error triggering install:', error);
-      this.savePromptPreferences('error');
       return false;
     }
   }
@@ -367,23 +276,23 @@ class PWAManager {
     modal.innerHTML = `
       <div class="ios-install-overlay">
         <div class="ios-install-content">
-          <button class="ios-install-close-x" onclick="this.closest('#ios-install-modal').remove()">×</button>
-          <h3>📱 Install Numix Calculator</h3>
+          <h3>Install Numix Calculator</h3>
           <p>To install this app on your iPhone:</p>
           <ol>
-            <li>Tap the Share button <span class="share-icon">⬆️</span> in Safari</li>
-            <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-            <li>Tap <strong>"Add"</strong> to confirm</li>
+            <li>Tap the Share button <span class="share-icon">⬆️</span></li>
+            <li>Scroll down and tap "Add to Home Screen"</li>
+            <li>Tap "Add" to confirm</li>
           </ol>
-          <button class="ios-install-close" onclick="this.closest('#ios-install-modal').remove()">Got it!</button>
+          <button class="ios-install-close">Got it!</button>
         </div>
       </div>
     `;
     
-    document.body.appendChild(modal);
+    modal.querySelector('.ios-install-close').addEventListener('click', () => {
+      modal.remove();
+    });
     
-    // Save that user was shown iOS instructions
-    this.savePromptPreferences('ios-instructions-shown');
+    document.body.appendChild(modal);
   }
   
   /**
@@ -392,34 +301,23 @@ class PWAManager {
   showInstallSuccessMessage() {
     const message = document.createElement('div');
     message.className = 'install-success-message';
-    message.innerHTML = `
-      <div class="success-content">
-        <span class="success-icon">✅</span>
-        <span class="success-text">App installed successfully!</span>
-      </div>
-    `;
+    message.innerHTML = '✅ App installed successfully!';
     message.style.cssText = `
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: #10b981;
       color: white;
-      padding: 1rem 1.5rem;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+      padding: 1rem 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
       z-index: 1001;
-      animation: successBounce 3s ease-out forwards;
-      font-weight: 500;
-      backdrop-filter: blur(10px);
+      animation: fadeInOut 3s ease-out;
     `;
     
     document.body.appendChild(message);
-    setTimeout(() => {
-      if (message.parentNode) {
-        message.remove();
-      }
-    }, 3000);
+    setTimeout(() => message.remove(), 3000);
   }
   
   /**
@@ -486,17 +384,12 @@ class PWAManager {
       font-size: 0.875rem;
       z-index: 1002;
       animation: slideDown 0.3s ease-out;
-      font-weight: 500;
     `;
     
     document.body.appendChild(statusEl);
     setTimeout(() => {
       statusEl.style.animation = 'slideUp 0.3s ease-out';
-      setTimeout(() => {
-        if (statusEl.parentNode) {
-          statusEl.remove();
-        }
-      }, 300);
+      setTimeout(() => statusEl.remove(), 300);
     }, 2000);
   }
   
@@ -576,14 +469,6 @@ class PWAManager {
   }
   
   /**
-   * Reset install prompt preferences (for testing)
-   */
-  resetInstallPromptPreferences() {
-    localStorage.removeItem('pwa-install-preferences');
-    this.installPromptDismissed = false;
-  }
-  
-  /**
    * Get app info for debugging
    */
   getAppInfo() {
@@ -593,7 +478,6 @@ class PWAManager {
       isIOS: this.isIOS,
       isAndroid: this.isAndroid,
       canInstall: this.canInstall(),
-      installPromptDismissed: this.installPromptDismissed,
       userAgent: navigator.userAgent,
       viewport: {
         width: window.innerWidth,
@@ -611,32 +495,6 @@ const pwaManager = new PWAManager();
 // Add CSS animations
 const style = document.createElement('style');
 style.textContent = `
-  @keyframes slideDownBounce {
-    0% { 
-      transform: translateY(-100px); 
-      opacity: 0; 
-    }
-    70% { 
-      transform: translateY(10px); 
-      opacity: 1; 
-    }
-    100% { 
-      transform: translateY(0); 
-      opacity: 1; 
-    }
-  }
-  
-  @keyframes slideUpFade {
-    from { 
-      transform: translateY(0); 
-      opacity: 1; 
-    }
-    to { 
-      transform: translateY(-100px); 
-      opacity: 0; 
-    }
-  }
-  
   @keyframes slideDown {
     from { transform: translateY(-100%); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -647,95 +505,45 @@ style.textContent = `
     to { transform: translateY(-100%); opacity: 0; }
   }
   
-  @keyframes successBounce {
-    0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-    10%, 90% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
-    15%, 85% { transform: translate(-50%, -50%) scale(1); }
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    10%, 90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   }
   
   .install-banner-content {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 1rem;
   }
   
-  .install-banner-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-  }
-  
   .install-banner-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-  
-  .install-banner-text {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .install-banner-text strong {
-    display: block;
-    font-size: 0.95rem;
-    margin-bottom: 0.125rem;
+    font-size: 2rem;
   }
   
   .install-banner-text p {
     margin: 0;
     opacity: 0.9;
-    font-size: 0.8rem;
-    line-height: 1.2;
-  }
-  
-  .install-banner-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
+    font-size: 0.875rem;
   }
   
   .install-banner-btn {
-    background: rgba(255, 255, 255, 0.95);
-    color: #1DB954;
+    background: white;
+    color: #232946;
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-  }
-  
-  .install-banner-btn:hover {
-    background: white;
-    transform: scale(1.05);
+    margin-left: auto;
   }
   
   .install-banner-close {
     background: none;
     border: none;
     color: white;
-    font-size: 1.25rem;
-    font-weight: bold;
+    font-size: 1.5rem;
     cursor: pointer;
     padding: 0.25rem;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    line-height: 1;
-  }
-  
-  .install-banner-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
   }
   
   .ios-install-overlay {
@@ -744,66 +552,36 @@ style.textContent = `
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.3s ease-out;
-    backdrop-filter: blur(4px);
   }
   
   .ios-install-content {
     background: white;
     padding: 2rem;
     border-radius: 1rem;
-    max-width: 320px;
+    max-width: 300px;
     margin: 1rem;
-    position: relative;
-    animation: slideDownBounce 0.4s ease-out;
-  }
-  
-  .ios-install-close-x {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .ios-install-close-x:hover {
-    background: #f0f0f0;
   }
   
   .ios-install-content h3 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    color: #333;
   }
   
   .ios-install-content ol {
     text-align: left;
-    padding-left: 1.5rem;
-    line-height: 1.6;
   }
   
   .share-icon {
     display: inline-block;
     background: #007AFF;
     color: white;
-    padding: 0.125rem 0.25rem;
+    padding: 0.25rem;
     border-radius: 0.25rem;
     font-size: 0.75rem;
-    margin: 0 0.25rem;
   }
   
   .ios-install-close {
@@ -815,35 +593,6 @@ style.textContent = `
     cursor: pointer;
     width: 100%;
     margin-top: 1rem;
-    font-weight: 500;
-  }
-  
-  .success-content {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .success-icon {
-    font-size: 1.25rem;
-  }
-  
-  /* Mobile responsiveness */
-  @media (max-width: 480px) {
-    .install-banner-content {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-    }
-    
-    .install-banner-actions {
-      justify-content: space-between;
-    }
-    
-    .install-banner-btn {
-      flex: 1;
-      text-align: center;
-    }
   }
 `;
 
