@@ -15,7 +15,7 @@ class SpotifyManager {
     this.volume = 0.5;
     
     // Spotify Web API endpoints
-    this.clientId = 'YOUR_SPOTIFY_CLIENT_ID'; // You'll need to register your app
+    this.clientId = '9d8622eecf41465f8bb4dbc0fdae566d'; // Your Spotify Client ID
     this.redirectUri = window.location.origin;
     this.scopes = [
       'streaming',
