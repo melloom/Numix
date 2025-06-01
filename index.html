@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- Viewport with safe area support for iPhone notch -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#232946" />
+    <meta name="background-color" content="#232946" />
+    <meta name="description" content="Numix - Advanced Calculator with Scientific, Programming, and Conversion Tools" />
+    <meta name="keywords" content="calculator, scientific calculator, programmer calculator, converter, PWA" />
+    
+    <!-- Apple Touch Icon and Startup Images -->
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Numix" />
+    
+    <!-- Favicon and Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    
+    <!-- Prevent zoom on input focus (iOS) -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <title>Numix - Advanced Calculator</title>
+    
+    <!-- Critical CSS for safe area handling -->
+    <style>
+      /* CSS Custom Properties for safe areas */
+      :root {
+        --safe-area-inset-top: env(safe-area-inset-top);
+        --safe-area-inset-right: env(safe-area-inset-right);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        --safe-area-inset-left: env(safe-area-inset-left);
+        
+        /* Fallback values for non-supporting browsers */
+        --safe-area-inset-top: 0px;
+        --safe-area-inset-right: 0px;
+        --safe-area-inset-bottom: 0px;
+        --safe-area-inset-left: 0px;
+      }
+      
+      /* Prevent overscroll and improve touch handling */
+      html, body {
+        overscroll-behavior: none;
+        touch-action: manipulation;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height for mobile */
+        margin: 0;
+        padding: 0;
+      }
+      
+      #root {
+        height: 100vh;
+        height: 100dvh;
+        padding-top: var(--safe-area-inset-top);
+        padding-bottom: var(--safe-area-inset-bottom);
+        padding-left: var(--safe-area-inset-left);
+        padding-right: var(--safe-area-inset-right);
+        box-sizing: border-box;
+      }
+      
+      /* Loading screen */
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #232946 0%, #3730a3 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      
+      .loading-logo {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease-out forwards;
+      }
+      
+      .loading-text {
+        font-size: 1rem;
+        opacity: 0.8;
+        opacity: 0;
+        animation: fadeInUp 0.8s ease-out 0.3s forwards;
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+      <div class="loading-logo">Numix</div>
+      <div class="loading-text">Advanced Calculator</div>
+    </div>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Hide loading screen when app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.5s ease-out';
+            setTimeout(() => {
+              loadingScreen.remove();
+            }, 500);
+          }
+        }, 1000);
+      });
+      
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>

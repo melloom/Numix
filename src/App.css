@@ -1,0 +1,2119 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+/* ===== PWA & MOBILE OPTIMIZATIONS ===== */
+
+/* Root-level CSS custom properties for safe areas and responsive design */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  
+  /* Fallback values for browsers that don't support safe area insets */
+  --safe-area-inset-top: 0px;
+  --safe-area-inset-right: 0px;
+  --safe-area-inset-bottom: 0px;
+  --safe-area-inset-left: 0px;
+  
+  /* Dynamic viewport units for mobile */
+  --vh: 1vh;
+  --vw: 1vw;
+  
+  /* Touch-optimized sizes */
+  --touch-target-min: 44px;
+  --mobile-padding: 1rem;
+  --mobile-gap: 0.75rem;
+  
+  /* Premium color system */
+  --primary-gradient: linear-gradient(135deg, #232946 0%, #3730a3 100%);
+  --surface-light: rgba(245, 247, 250, 0.95);
+  --surface-dark: rgba(36, 41, 61, 0.98);
+  --accent-gold: #fbbf24;
+  --text-primary: #232946;
+  --text-secondary: #64748b;
+  --border-light: #e5e9f2;
+  --border-accent: #6366f1;
+  
+  /* Add these CSS variables for programmer calculator */
+  --hex-digit-bg: #6366f1;
+  --hex-digit-color: #ffffff;
+  --number-btn-bg: #f8fafc;
+  --number-btn-color: #232946;
+}
+
+/* Update viewport height for mobile browsers that support it */
+@supports (height: 100dvh) {
+  :root {
+    --vh: 1dvh;
+  }
+}
+
+/* Comprehensive mobile reset and optimizations */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Prevent text size adjustment on iOS */
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  
+  /* Improve font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Mobile-optimized tap highlighting */
+  -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2);
+  
+  /* Prevent zoom on input focus (iOS Safari) */
+  touch-action: manipulation;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  background: linear-gradient(135deg, #e5e9f2 0%, #c7d2fe 100%);
+  transition: background 0.3s ease;
+  
+  /* Handle iOS safe areas with CSS custom properties */
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+  
+  /* Mobile optimizations */
+  height: calc(100 * var(--vh));
+  min-height: calc(100 * var(--vh));
+  overflow-x: hidden;
+  
+  /* Prevent bounce scrolling on iOS */
+  overscroll-behavior: none;
+  
+  /* Improve touch responsiveness */
+  touch-action: manipulation;
+  
+  /* Disable user select for better app feel */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Disable callouts on iOS */
+  -webkit-touch-callout: none;
+}
+
+#root {
+  height: calc(100 * var(--vh));
+  min-height: calc(100 * var(--vh));
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dark theme updates with CSS custom properties */
+body[data-theme="dark"] {
+  background: linear-gradient(135deg, #181c2a 0%, #232946 100%);
+  
+  /* Update CSS variables for dark mode */
+  --hex-digit-bg: #6366f1;
+  --hex-digit-color: #ffffff;
+  --number-btn-bg: #35377a;
+  --number-btn-color: #ffffff;
+  --surface-light: var(--surface-dark);
+  --text-primary: #ffffff;
+  --text-secondary: #b8c1ec;
+  --border-light: #232946;
+}
+
+.app-bg {
+  min-height: calc(100 * var(--vh));
+  height: calc(100 * var(--vh));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.calculator-container {
+  background: var(--surface-light);
+  border-radius: 1.5rem;
+  box-shadow: 
+    0 4px 32px 0 rgba(31, 38, 135, 0.12), 
+    0 1.5px 4px 0 rgba(0,0,0,0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
+  max-width: 370px;
+  width: 100%;
+  max-height: calc(100 * var(--vh) - 2rem);
+  height: calc(100 * var(--vh) - 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-light);
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ===== MOBILE-FIRST RESPONSIVE DESIGN ===== */
+
+/* Extra small devices (phones, less than 576px) */
+@media (max-width: 575.98px) {
+  :root {
+    --mobile-padding: 0.75rem;
+    --mobile-gap: 0.5rem;
+  }
+  
+  body {
+    padding-top: max(var(--safe-area-inset-top), 0.5rem);
+    padding-bottom: max(var(--safe-area-inset-bottom), 0.5rem);
+  }
+  
+  .app-bg {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  
+  .calculator-container {
+    max-width: 100%;
+    width: 100%;
+    height: calc(100 * var(--vh));
+    max-height: calc(100 * var(--vh));
+    border-radius: 0;
+    box-shadow: none;
+    padding: max(var(--safe-area-inset-top), 0.75rem) 1rem max(var(--safe-area-inset-bottom), 0.75rem) 1rem;
+    margin: 0;
+    border: none;
+  }
+  
+  /* Optimize button sizes for mobile */
+  .keypad-btn {
+    min-height: var(--touch-target-min);
+    font-size: 1.1em;
+    padding: 0.75rem 0.5rem;
+    border-radius: 0.75rem;
+  }
+  
+  .modern-display {
+    padding: 1rem 0.875rem 0.75rem 0.875rem;
+    min-height: 70px;
+    border-radius: 0.875rem;
+  }
+  
+  /* Make popup fixed and full-width on mobile */
+  .calc-mode-popup {
+    position: fixed !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    bottom: max(var(--safe-area-inset-bottom), 1rem) !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 1rem;
+  }
+}
+
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .calculator-container {
+    max-width: 420px;
+    padding: 1.25rem;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .calculator-container {
+    max-width: 450px;
+    padding: 1.5rem;
+  }
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  .calculator-container {
+    max-width: 370px;
+    height: auto;
+    max-height: none;
+  }
+  
+  .app-bg {
+    height: 100vh;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ===== ENHANCED TOUCH INTERACTIONS ===== */
+
+/* Improve button touch feedback */
+.keypad-btn {
+  transition: 
+    transform 0.1s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+  
+  /* Ensure minimum touch target size */
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  
+  /* Better touch feedback */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.keypad-btn:active {
+  transform: scale(0.95);
+  transition: transform 0.05s ease;
+}
+
+/* Prevent text selection on calculator elements */
+.calculator-container,
+.calculator-container * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in input fields */
+.convertor-input,
+.program-editor textarea,
+input[type="text"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* ===== PWA OPTIMIZATIONS ===== */
+
+/* Improve loading experience */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.calculator-container {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Improve focus management for accessibility */
+:focus-visible {
+  outline: 2px solid var(--border-accent);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Hide focus outline on mouse/touch interactions */
+.js-focus-visible :focus:not(.focus-visible) {
+  outline: none;
+}
+
+/* ===== LANDSCAPE OPTIMIZATIONS ===== */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .calculator-container {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .modern-display {
+    min-height: 60px;
+    padding: 0.75rem;
+  }
+  
+  .keypad-btn {
+    min-height: 40px;
+    font-size: 1rem;
+    padding: 0.5rem;
+  }
+  
+  .calculator-mode-tabs {
+    gap: 0.25rem;
+  }
+  
+  .mode-tab {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* ===== CONTINUE WITH EXISTING STYLES ===== */
+
+body, html, #root {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', Arial, sans-serif;
+  background: linear-gradient(135deg, #e5e9f2 0%, #c7d2fe 100%);
+  transition: background 0.3s;
+  /* Handle iOS safe areas */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  box-sizing: border-box;
+  /* Prevent text enlargement on iOS Safari */
+  -webkit-text-size-adjust: 100%;
+}
+
+.app-bg {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calculator-container {
+  background: rgba(245, 247, 250, 0.95);
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 32px 0 rgba(31, 38, 135, 0.12), 0 1.5px 4px 0 rgba(0,0,0,0.04);
+  padding: calc(1.5rem + env(safe-area-inset-top)) 1.5rem calc(1.5rem + env(safe-area-inset-bottom)) 1.5rem;
+  max-width: 370px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid #e5e9f2;
+  /* Prevent overflow */
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  html, body, #root {
+    min-height: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent bounce/overscroll on iOS */
+  }
+  
+  .app-bg {
+    min-height: 100%;
+    height: 100%;
+  }
+  
+  .calculator-container {
+    min-height: 100%;
+    height: 100%;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    padding: calc(env(safe-area-inset-top) + 0.75rem) 1rem calc(env(safe-area-inset-bottom) + 0.75rem) 1rem;
+    margin: 0;
+    overflow: hidden;
+  }
+  
+  /* Make buttons more tappable on mobile */
+  .keypad-btn {
+    min-height: 48px;
+    font-size: 1.1em;
+  }
+  
+  /* Fixed position popup for mobile */
+  .calc-mode-popup {
+    position: fixed !important;
+  }
+}
+
+body[data-theme="dark"] .calculator-container {
+  background: rgba(36,41,61,0.98);
+  box-shadow: 0 8px 32px 0 rgba(20, 20, 40, 0.25);
+  border: 1px solid #232946;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(40px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.calculator-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.theme-tabs {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.calc-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.calc-tab {
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  color: #64748b;
+  padding: 0.3rem 0.9rem;
+  border-radius: 1.2rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.calc-tab.active,
+.calc-tab:disabled {
+  background: #6366f1;
+  color: #fff;
+  cursor: default;
+}
+
+.calc-tab:not(.active):not(:disabled):hover {
+  background: #e0e7ef;
+  color: #22223b;
+}
+
+body[data-theme="dark"] .calc-tab {
+  color: #b8c1ec;
+  background: none;
+}
+
+body[data-theme="dark"] .calc-tab.active,
+body[data-theme="dark"] .calc-tab:disabled {
+  background: #35377a;
+  color: #fff;
+}
+
+body[data-theme="dark"] .calc-tab:not(.active):not(:disabled):hover {
+  background: #232946;
+  color: #fff;
+}
+
+.modern-display {
+  background: rgba(255,255,255,0.85);
+  border-radius: 1.1rem;
+  padding: 1.3rem 1.1rem 0.9rem 1.1rem;
+  min-height: 80px;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1.5px 4px rgba(99,102,241,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  border: 1.5px solid #e5e9f2;
+  transition: background 0.2s, border 0.3s;
+  backdrop-filter: blur(2px);
+}
+
+body[data-theme="dark"] .modern-display {
+  background: rgba(36,41,61,0.98);
+  border: 2px solid #6366f1;
+  box-shadow: 0 2px 12px rgba(99,102,241,0.15);
+}
+
+.digital {
+  font-family: 'Share Tech Mono', 'Consolas', monospace;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.09);
+}
+
+.modern-display .expression {
+  font-size: 1.25rem;
+  color: #64748b;
+  min-height: 1.5em;
+  word-break: break-all;
+  opacity: 0.85;
+  transition: color 0.3s;
+  width: 100%;
+  text-align: right;
+}
+
+body[data-theme="dark"] .modern-display .expression {
+  color: #b8c1ec;
+}
+
+.modern-display .result {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #22223b;
+  margin-top: 0.2em;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: color 0.3s;
+  width: 100%;
+  text-align: right;
+}
+
+body[data-theme="dark"] .modern-display .result {
+  color: #fffffe;
+}
+
+.modern-keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 0.8rem;
+}
+
+/* Improved touch feedback for all calculator modes */
+.keypad-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Enhance active state feedback */
+.keypad-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 2px rgba(36,41,61,0.10);
+  transition: transform 0.08s ease-out;
+}
+
+/* Make styling consistent across all calculator modes */
+.scientific-calculator .keypad-btn,
+.programmer-calculator .keypad-btn,
+.convertor .keypad-btn {
+  padding: 1.1rem 0;
+  transition: transform 0.1s, background 0.18s, color 0.18s, box-shadow 0.18s;
+  outline: none;
+}
+
+/* Improve responsive layout for all calculators */
+@media (max-width: 380px) {
+  .scientific-keypad .keypad-btn,
+  .programmer-calculator .keypad-btn,
+  .convertor .keypad-btn {
+    padding: 8px 4px !important;
+    font-size: 0.9em !important;
+    min-height: 40px !important;
+  }
+  
+  .programmer-calculator .base-btn {
+    font-size: 0.85em !important;
+  }
+  
+  .convertor-input, .convertor-select {
+    font-size: 0.95em !important;
+  }
+}
+
+.keypad-btn.equals {
+  background: linear-gradient(135deg, #fb7185 0%, #fbbf24 100%) !important;
+  color: #fff;
+  font-size: 1.25rem;
+  box-shadow: 0 2px 8px rgba(251,113,133,0.10);
+  grid-row: 4 / span 2;
+  grid-column: 4;
+  height: 100%;
+  border: 2px solid #fbbf24 !important;
+}
+
+.keypad-btn.equals:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #fb7185 100%) !important;
+}
+
+.keypad-btn.clear {
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+  color: #fff;
+  font-weight: 700;
+  border: 2px solid #f87171;
+}
+
+.keypad-btn.clear:hover {
+  background: linear-gradient(90deg, #fbbf24 0%, #f87171 100%);
+}
+
+.keypad-btn.operator,
+.keypad-btn.plus-btn {
+  background: linear-gradient(135deg, #fb7185 0%, #fbbf24 100%) !important;
+  color: #fff;
+  font-weight: 700;
+  border: 2px solid #fb7185 !important;
+  box-shadow: 0 0 0 2px rgba(251,191,36,0.08), 0 2px 8px rgba(251,113,133,0.10);
+}
+
+.keypad-btn.operator:hover,
+.keypad-btn.plus-btn:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #fb7185 100%) !important;
+  color: #fff;
+  border-color: #fb7185 !important;
+}
+
+.keypad-btn.percent-btn,
+.keypad-btn.operator.percent-btn {
+  background: linear-gradient(135deg, #fb7185 0%, #fbbf24 100%) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  border: 2px solid #fb7185 !important;
+  box-shadow: 0 0 0 2px rgba(251,191,36,0.08), 0 2px 8px rgba(251,113,133,0.10) !important;
+}
+
+.keypad-btn.plusminus {
+  background: linear-gradient(135deg, #fb7185 0%, #fbbf24 100%) !important;
+  color: #fff !important;
+  border: 2px solid #fb7185 !important;
+  box-shadow: 0 0 0 2px rgba(251,191,36,0.08), 0 2px 8px rgba(251,113,133,0.10) !important;
+}
+
+.keypad-btn.percent-btn:hover,
+.keypad-btn.operator.percent-btn:hover,
+.keypad-btn.plusminus:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #fb7185 100%) !important;
+}
+
+.keypad-btn.calc-btn {
+  background: #fbbf24;
+  color: #fff;
+  font-weight: 700;
+}
+
+.keypad-btn.calc-btn:hover {
+  background: #f59e42;
+}
+
+.keypad-btn.zero-btn {
+  /* Optionally style the 0 button differently */
+}
+
+.keypad-btn[style*="grid-column: 1 / span 2"] {
+  grid-column: 1 / span 2;
+}
+
+.keypad-btn.calc-icon-btn {
+  background: linear-gradient(135deg, #232946 0%, #3730a3 100%) !important;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  border-radius: 1rem;
+  border: 3px solid #fbbf24 !important;
+  width: 100%;
+  height: 100%;
+  min-height: 56px;
+  min-width: 56px;
+  box-shadow: 0 0 0 4px rgba(251,191,36,0.15), 0 2px 12px rgba(36,41,61,0.22);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s, border 0.2s;
+}
+.keypad-btn.calc-icon-btn svg {
+  width: 2.2em;
+  height: 2.2em;
+  display: block;
+}
+.keypad-btn.calc-icon-btn:hover,
+.keypad-btn.calc-icon-btn:focus {
+  background: linear-gradient(135deg, #3730a3 0%, #232946 100%) !important;
+  color: #fbbf24;
+  box-shadow: 0 0 0 6px rgba(251,191,36,0.22), 0 4px 16px rgba(36,41,61,0.28);
+  transform: scale(1.08);
+  border-color: #fb7185 !important;
+}
+
+.calc-icon-btn.calc-icon-btn-active {
+  transform: scale(0.95);
+  box-shadow: 0 0 0 8px rgba(99,102,241,0.18), 0 0 16px #6366f1;
+  transition: transform 0.12s cubic-bezier(.4,0,.2,1), box-shadow 0.18s;
+}
+
+.theme-switcher.modern-theme-switcher {
+  background: linear-gradient(135deg, #e0e7ef 0%, #c7d2fe 100%);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #6366f1;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(99,102,241,0.08);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  margin-right: 0.5rem;
+}
+
+.theme-switcher.modern-theme-switcher:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #a5b4fc 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.18);
+}
+
+body[data-theme="dark"] .theme-switcher.modern-theme-switcher {
+  background: linear-gradient(135deg, #232946 0%, #35377a 100%);
+  color: #f4f4f4;
+}
+
+body[data-theme="dark"] .theme-switcher.modern-theme-switcher:hover {
+  background: linear-gradient(135deg, #35377a 0%, #232946 100%);
+  color: #fbbf24;
+}
+
+/* Fix the popup styling classes */
+.calc-mode-popup {
+  animation: popup-fade-slide 0.22s cubic-bezier(.4,0,.2,1);
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  position: absolute; /* Ensure absolute positioning */
+  z-index: 100;
+  /* Ensure the popup appears above everything else */
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18), 0 2px 8px rgba(0,0,0,0.10);
+}
+
+/* Fix the popup-inner styling */
+.calc-mode-popup-inner {
+  padding: 0.6rem 0;
+  width: 100%;
+}
+
+/* Style the popup items */
+.calc-mode-item {
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  color: #e5e9f2;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.calc-mode-item:hover,
+.calc-mode-item:focus {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.calc-mode-item.active {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.calc-mode-icon {
+  margin-right: 0.8rem;
+  font-size: 1.1em;
+  width: 1.2em;
+  text-align: center;
+  display: inline-block;
+}
+
+.calc-mode-label {
+  flex: 1;
+}
+
+.calc-mode-switch {
+  display: flex;
+  align-items: center;
+}
+
+body[data-theme="dark"] .calc-mode-popup {
+  background: rgba(36,41,61,0.98);
+  border: 2px solid #6366f1;
+}
+
+body[data-theme="dark"] .calc-mode-item {
+  color: #e5e9f2;
+}
+
+body[data-theme="dark"] .calc-mode-item:hover,
+body[data-theme="dark"] .calc-mode-item:focus {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="dark"] .calc-mode-item.active {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+body[data-theme="dark"] .calc-mode-icon {
+  color: #fbbf24;
+}
+
+body[data-theme="dark"] .calc-mode-switch {
+  color: #fbbf24;
+}
+
+body[data-theme="dark"] .calc-mode-switch:hover {
+  color: #ffffff;
+}
+
+/* iOS popup styling - keep the styling but remove animation from class */
+.ios-calc-popup {
+  border-radius: 20px;
+  background: rgba(30, 41, 59, 0.97);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18), 0 2px 8px rgba(0,0,0,0.10);
+  backdrop-filter: blur(18px);
+  margin-bottom: 10px;
+  min-width: 140px;
+  max-width: 180px;
+  border-radius: 16px;
+  /* Remove animation properties from here */
+  pointer-events: auto;
+}
+
+@media (max-width: 500px) {
+  .calc-mode-popup-inner {
+    min-width: 160px;
+    font-size: 0.98rem;
+  }
+}
+
+.calc-mode-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 99;
+  background: rgba(30, 41, 59, 0.18);
+  backdrop-filter: blur(1.5px);
+  pointer-events: auto;
+  transition: background 0.18s;
+}
+
+.history-menu-btn {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  margin-right: 0.15rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.18rem 0.38rem 0.18rem 0.18rem;
+  border-radius: 0.6em;
+  height: 2.1rem;
+  width: 2.1rem;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  transition: background 0.16s;
+}
+.history-menu-btn:focus,
+.history-menu-btn:hover {
+  background: rgba(99,102,241,0.09);
+}
+
+.history-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,41,59,0.22);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.18s;
+  backdrop-filter: blur(2px);
+}
+
+.history-modal {
+  background: #fff;
+  border-radius: 1.3rem;
+  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18), 0 2px 8px rgba(0,0,0,0.10);
+  padding: 2.2rem 1.7rem 1.5rem 1.7rem;
+  min-width: 320px;
+  max-width: 92vw;
+  max-height: 82vh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  animation: popup-fade-slide 0.22s cubic-bezier(.4,0,.2,1);
+  transition: background 0.2s, color 0.2s;
+}
+
+.history-modal-title {
+  margin: 0 0 1.1rem 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #232946;
+  letter-spacing: 0.01em;
+}
+
+.history-modal-content {
+  color: #64748b;
+  font-size: 1.08rem;
+  width: 100%;
+  max-height: 55vh;
+  overflow-y: auto;
+  border-radius: 1em;
+  padding-right: 0.2em;
+  box-sizing: border-box;
+}
+
+.history-modal-content .history-time {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.3em;
+}
+
+.history-modal-content .history-note {
+  text-align: center;
+  font-style: italic;
+  color: #64748b;
+  margin-top: 1.2rem;
+}
+
+body[data-theme="dark"] .history-modal-content .history-note {
+  color: #a5b4fc;
+}
+
+/* Style the calculator type pill in history */
+.history-calc-type {
+  display: inline-block;
+  font-size: 0.8em;
+  background-color: #6366f1;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
+body[data-theme="dark"] .history-calc-type {
+  background-color: #4f46e5;
+  color: white;
+}
+
+/* Make history entries more distinct by calculator type */
+.history-modal-content li[data-calc-type="Scientific"] .history-expr {
+  color: #22c55e; /* Green for scientific */
+}
+
+.history-modal-content li[data-calc-type="Programmer"] .history-expr {
+  color: #f59e0b; /* Amber for programmer */
+}
+
+.history-modal-content li[data-calc-type="Convert"] .history-expr {
+  color: #0ea5e9; /* Sky blue for converter */
+}
+
+/* Improved history item styling */
+.history-modal-content li {
+  margin-bottom: 1.1em;
+  border-bottom: 1px solid #e5e9f2;
+  padding-bottom: 0.7em;
+  transition: background 0.18s;
+  position: relative;
+}
+
+body[data-theme="dark"] .history-modal-content li {
+  border-bottom: 1px solid #35377a;
+}
+
+/* Clear history button with confirmation styling */
+.history-modal-content button {
+  margin-top: 0.7em;
+  background: #fb7185;
+  color: #fff;
+  border: none;
+  border-radius: 0.7em;
+  padding: 0.5em 1.2em;
+  font-weight: 600;
+  font-size: 1em;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(251,113,133,0.10);
+  transition: background 0.18s, transform 0.1s;
+}
+
+.history-modal-content button:hover {
+  background: #f43f5e;
+}
+
+.history-modal-content button:active {
+  transform: scale(0.98);
+}
+
+body[data-theme="dark"] .history-modal {
+  background: #232946;
+  color: #fff;
+  box-shadow: 0 8px 32px 0 rgba(31,38,135,0.28), 0 2px 8px rgba(0,0,0,0.18);
+  border: 2px solid #6366f1; /* Add a distinct outline in dark mode */
+}
+
+body[data-theme="dark"] .history-modal-title {
+  color: #fff;
+}
+body[data-theme="dark"] .history-modal-content {
+  color: #b8c1ec;
+}
+body[data-theme="dark"] .history-modal-content .history-expr {
+  color: #a5b4fc;
+}
+body[data-theme="dark"] .history-modal-content .history-res {
+  color: #fbbf24;
+}
+body[data-theme="dark"] .history-modal-content .history-time {
+  color: #8a8fa3;
+}
+body[data-theme="dark"] .history-modal-close:hover,
+body[data-theme="dark"] .history-modal-close:focus {
+  background: #35377a;
+  color: #fbbf24;
+}
+body[data-theme="dark"] .history-modal-content button {
+  background: #6366f1;
+  color: #fff;
+}
+body[data-theme="dark"] .history-modal-content button:hover {
+  background: #fb7185;
+  color: #fff;
+}
+
+.scientific-keypad .sci-btn {
+  font-size: 0.98rem !important;
+  padding: 0.6rem 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+body[data-theme="dark"] .convertor-display,
+body[data-theme="dark"] .convertor-input,
+body[data-theme="dark"] .convertor-select {
+  border: 2px solid #6366f1 !important;
+  background: #232946 !important;
+  color: #fff !important;
+}
+
+.convertor-input,
+.convertor-select {
+  transition: border 0.2s, background 0.2s, color 0.2s;
+}
+
+/* Fix dark mode styling for special buttons */
+body[data-theme="dark"] .keypad-btn.percent-btn,
+body[data-theme="dark"] .keypad-btn.operator.percent-btn,
+body[data-theme="dark"] .keypad-btn[style*="backgroundColor"] {
+  border: none !important;
+}
+
+/* Ensure consistent styling for converter buttons in dark mode */
+body[data-theme="dark"] .converter-calculator .keypad-btn:not(.calc-icon-btn) {
+  background-color: #35377a !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+body[data-theme="dark"] .converter-calculator .keypad-btn[style*="backgroundColor"] {
+  color: white !important;
+}
+
+/* Fix converter layout issues */
+.converter-calculator .modern-display {
+  padding: 0.8rem 0.7rem;
+  overflow: hidden;
+  width: auto;
+  box-sizing: border-box;
+}
+
+.converter-calculator .convertor-select {
+  width: auto;
+  max-width: 85px;
+  min-width: 0 !important;
+  text-overflow: ellipsis;
+}
+
+.converter-calculator .convert-input-section,
+.converter-calculator .convert-output-section {
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.converter-calculator .convertor-input {
+  min-width: 0;
+  width: 0; /* Force it to shrink */
+  flex: 1;
+}
+
+/* Make select options more readable in small spaces */
+.converter-calculator .convertor-select option {
+  font-size: 0.9em;
+  padding: 2px;
+}
+
+/* In extra small screens, further reduce sizes */
+@media (max-width: 330px) {
+  .converter-calculator .convertor-select {
+    max-width: 70px;
+    font-size: 0.8em !important;
+  }
+  
+  .converter-calculator .converter-category {
+    font-size: 0.8em !important;
+  }
+  
+  .converter-calculator .modern-display {
+    padding: 0.5rem 0.5rem;
+  }
+}
+
+/* Dark mode styles for programmer calculator base indicator */
+body[data-theme="dark"] .programmer-calculator .modern-display div[style*="position: absolute"] {
+  background-color: #35377a !important;
+  color: #ffffff !important;
+  border-color: #6366f1 !important;
+}
+
+/* Dark mode styles for base buttons */
+body[data-theme="dark"] .programmer-calculator .base-btn {
+  background-color: #232946 !important;
+  color: #ffffff !important;
+  border-color: #35377a !important;
+}
+
+body[data-theme="dark"] .programmer-calculator .base-btn.active-base {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.2) !important;
+}
+
+/* Programmer calculator specific styles for large number handling */
+.programmer-calculator .result.digital {
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  padding-bottom: 4px;
+  font-size: calc(1.8em - 0.1vw); /* Slightly responsive font size */
+  max-height: 1.5em; /* Prevent vertical expansion */
+  margin-bottom: 4px; /* Add space for the scrollbar */
+}
+
+.programmer-calculator .result.digital::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Make base indicator stay on top and not be affected by scrolling */
+.programmer-calculator .modern-display div[style*="position: absolute"] {
+  z-index: 5;
+}
+
+/* Programmer calculator memory display styles */
+.programmer-calculator .memory-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #35377a 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: 2px solid #6366f1 !important;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.2) !important;
+}
+
+.programmer-calculator .memory-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+}
+
+/* Enhance ASCII mode styling */
+.programmer-calculator button.active-base {
+  background-color: #6366f1 !important;
+  color: white !important;
+  border: 2px solid #4f46e5 !important;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.2) !important;
+}
+
+/* Better ASCII indicator in display */
+.programmer-calculator .modern-display div[style*="position: absolute"] {
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 5;
+}
+
+/* Programmer calculator delete button styling */
+.programmer-calculator .keypad-btn.delete-btn {
+  background: linear-gradient(135deg, #fb7185 0%, #fbbf24 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 2px solid #fb7185 !important;
+  box-shadow: 0 0 0 2px rgba(251,191,36,0.08), 0 2px 8px rgba(251,113,133,0.10) !important;
+}
+
+.programmer-calculator .keypad-btn.delete-btn:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #fb7185 100%) !important;
+}
+
+/* Enhance memory button styling */
+.programmer-calculator .memory-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #35377a 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: 2px solid #6366f1 !important;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.2) !important;
+}
+
+.programmer-calculator .memory-btn:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+}
+
+/* Quick base conversion styles */
+.quick-base-conversion {
+  margin: 0.5rem 0;
+  padding: 0.6rem;
+  background: rgba(99, 102, 241, 0.06);
+  border-radius: 0.8rem;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  animation: fade-in 0.2s ease-out;
+}
+
+.quick-base-title {
+  font-size: 0.7rem;
+  color: #6366f1;
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+  text-align: center;
+}
+
+.quick-base-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.quick-base-btn {
+  padding: 0.4rem;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  border: 1px solid #e5e9f2;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.quick-base-btn.active-base {
+  border: 1px solid #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.quick-base-btn:hover:not(.active-base) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.base-label {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
+.base-value {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.82rem;
+  color: #232946;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Add converter button style */
+.keypad-btn.converter-btn {
+  font-size: 1.1em;
+}
+
+/* Animation for quick conversion panel */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode styling */
+body[data-theme="dark"] .quick-base-conversion {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+body[data-theme="dark"] .quick-base-title {
+  color: #a5b4fc;
+}
+
+body[data-theme="dark"] .quick-base-btn {
+  background: #232946;
+  border-color: #35377a;
+}
+
+body[data-theme="dark"] .quick-base-btn.active-base {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.2);
+}
+
+body[data-theme="dark"] .base-label {
+  color: #a5b4fc;
+}
+
+body[data-theme="dark"] .base-value {
+  color: #f8fafc;
+}
+
+/* Enhanced history styling */
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.history-item {
+  margin-bottom: 1.2em;
+  border-bottom: 1px solid #e5e9f2;
+  padding-bottom: 0.9em;
+  transition: background 0.18s;
+  position: relative;
+  padding: 0.8em;
+  border-radius: 8px;
+}
+
+.history-item:hover {
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Different styling for each calculator type */
+.history-item.history-scientific {
+  border-left: 4px solid #22c55e;
+}
+
+.history-item.history-programmer {
+  border-left: 4px solid #f59e0b;
+}
+
+.history-item.history-convert {
+  border-left: 4px solid #0ea5e9;
+}
+
+.history-item.history-standard {
+  border-left: 4px solid #6366f1;
+}
+
+/* Expression container with metadata */
+.history-expr-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  align-items: center;
+  margin-bottom: 0.4em;
+}
+
+/* Category tags for scientific calculator */
+.history-category {
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.history-category.scientific-trigonometric {
+  background-color: #22c55e;
+  color: white;
+}
+
+.history-category.scientific-logarithmic {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+.history-category.scientific-power\/root {
+  background-color: #f97316;
+  color: white;
+}
+
+.history-category.scientific-basic {
+  background-color: #6366f1;
+  color: white;
+}
+
+/* Programmer calculator base tag */
+.history-base-tag {
+  font-size: 0.7em;
+  background-color: #f59e0b;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.history-tag.bitwise {
+  font-size: 0.7em;
+  background-color: #ef4444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+  margin-right: 0.4em;
+}
+
+/* Converter category */
+.history-category.converter {
+  background-color: #0ea5e9;
+  color: white;
+}
+
+/* Expression styling */
+.history-expr {
+  font-size: 1.05em;
+  line-height: 1.4;
+  word-break: break-word;
+  color: #232946;
+}
+
+.history-expr.scientific {
+  color: #15803d;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.history-expr.programmer {
+  color: #b45309;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.history-expr.converter {
+  color: #0369a1;
+}
+
+/* Result styling */
+.history-res {
+  font-size: 1.1em;
+  font-weight: 500;
+  margin-top: 0.3em;
+  display: flex;
+  align-items: center;
+}
+
+.history-equals {
+  margin-right: 0.5em;
+  opacity: 0.7;
+}
+
+.history-value {
+  font-weight: 600;
+}
+
+.history-value.scientific {
+  color: #15803d;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.history-value.programmer {
+  color: #b45309;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* Time and metadata section */
+.history-time {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5em;
+  font-size: 0.75em;
+}
+
+.history-timestamp {
+  color: #64748b;
+}
+
+/* Calculator type badges */
+.history-calc-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.85em;
+}
+
+.history-calc-type.standard {
+  background-color: #6366f1;
+  color: white;
+}
+
+.history-calc-type.scientific {
+  background-color: #22c55e;
+  color: white;
+}
+
+.history-calc-type.programmer {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.history-calc-type.convert {
+  background-color: #0ea5e9;
+  color: white;
+}
+
+/* Clear history button */
+.clear-history-btn {
+  display: block;
+  margin: 1.2em auto 0.5em;
+  background: #f43f5e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6em 1.2em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.clear-history-btn:hover {
+  background: #e11d48;
+}
+
+.clear-history-btn:active {
+  transform: scale(0.98);
+}
+
+.history-note {
+  text-align: center;
+  font-style: italic;
+  color: #64748b;
+  margin-top: 1.2em;
+  font-size: 0.8em;
+}
+
+/* Dark mode support */
+body[data-theme="dark"] .history-expr {
+  color: #e5e7eb;
+}
+
+body[data-theme="dark"] .history-item {
+  border-bottom-color: #374151;
+}
+
+body[data-theme="dark"] .history-item:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+body[data-theme="dark"] .history-expr.scientific {
+  color: #4ade80;
+}
+
+body[data-theme="dark"] .history-expr.programmer {
+  color: #fbbf24;
+}
+
+body[data-theme="dark"] .history-expr.converter {
+  color: #38bdf8;
+}
+
+body[data-theme="dark"] .history-value.scientific {
+  color: #4ade80;
+}
+
+body[data-theme="dark"] .history-value.programmer {
+  color: #fbbf24;
+}
+
+body[data-theme="dark"] .history-timestamp {
+  color: #9ca3af;
+}
+
+/* Improved history modal close button */
+.history-modal {
+  position: relative; /* Ensure proper positioning of close button */
+}
+
+.history-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: #64748b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.history-modal-close:hover,
+.history-modal-close:focus {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  transform: scale(1.1);
+}
+
+/* Custom confirmation modal styling */
+.confirmation-modal {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  padding: 1.5rem;
+  width: 85%;
+  max-width: 340px;
+  text-align: center;
+  animation: popup-bounce 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid #e5e9f2;
+}
+
+@keyframes popup-bounce {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.confirmation-title {
+  color: #232946;
+  font-size: 1.4rem;
+  margin: 0 0 1rem 0;
+  font-weight: 700;
+}
+
+.confirmation-message {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.confirmation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.cancel-button {
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-button:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.confirm-button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.confirm-button:hover {
+  background: #dc2626;
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.confirm-button:active {
+  transform: translateY(1px);
+}
+
+/* Dark mode styles for confirmation modal */
+body[data-theme="dark"] .confirmation-modal {
+  background: #232946;
+  border: 2px solid #35377a;
+}
+
+body[data-theme="dark"] .confirmation-title {
+  color: #f8fafc;
+}
+
+body[data-theme="dark"] .confirmation-message {
+  color: #b8c1ec;
+}
+
+body[data-theme="dark"] .cancel-button {
+  background: #35377a;
+  color: #b8c1ec;
+}
+
+body[data-theme="dark"] .cancel-button:hover {
+  background: #3730a3;
+  color: #f8fafc;
+}
+
+/* ===== SPOTIFY PLAYER STYLES ===== */
+
+.spotify-connect {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.spotify-connect-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.2);
+}
+
+.spotify-connect-btn:hover {
+  background: linear-gradient(135deg, #1ed760 0%, #1DB954 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.spotify-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.spotify-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  margin-left: auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.spotify-error-icon {
+  font-size: 1rem;
+}
+
+.spotify-error-text {
+  font-size: 0.8rem;
+}
+
+/* Main Spotify Player */
+.spotify-player {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.95) 0%, rgba(30, 215, 96, 0.95) 100%);
+  border-radius: 0.875rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.2);
+  animation: slideInFromTop 0.4s ease-out;
+}
+
+.spotify-player-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+}
+
+/* Track Info */
+.spotify-track-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.spotify-track-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spotify-album-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spotify-album-placeholder {
+  font-size: 1.25rem;
+  opacity: 0.7;
+}
+
+.spotify-track-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.spotify-track-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  margin-bottom: 0.125rem;
+}
+
+.spotify-track-artist {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Controls */
+.spotify-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.spotify-control-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.spotify-control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.spotify-control-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.spotify-play-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1DB954;
+  width: 36px;
+  height: 36px;
+  margin: 0 0.25rem;
+}
+
+.spotify-play-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.spotify-play-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Volume */
+.spotify-volume {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.spotify-volume-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  opacity: 0.8;
+}
+
+.spotify-volume-slider {
+  width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.spotify-volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.spotify-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.spotify-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+/* Disconnect */
+.spotify-disconnect-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.spotify-disconnect-btn:hover {
+  background: rgba(220, 38, 38, 0.8);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.spotify-disconnect-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* Animations */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 576px) {
+  .spotify-player {
+    padding: 0.5rem;
+  }
+  
+  .spotify-player-content {
+    gap: 0.5rem;
+  }
+  
+  .spotify-track-image {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .spotify-track-name {
+    font-size: 0.8rem;
+  }
+  
+  .spotify-track-artist {
+    font-size: 0.7rem;
+  }
+  
+  .spotify-controls {
+    gap: 0.125rem;
+  }
+  
+  .spotify-control-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .spotify-play-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .spotify-volume {
+    display: none; /* Hide volume on very small screens */
+  }
+  
+  .spotify-connect-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .spotify-track-details {
+    display: none; /* Hide track details on very small screens */
+  }
+  
+  .spotify-controls {
+    margin-left: auto;
+  }
+}
+
+/* Dark Mode Support */
+body[data-theme="dark"] .spotify-error {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+body[data-theme="dark"] .spotify-player {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.9) 0%, rgba(30, 215, 96, 0.9) 100%);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+}
+
+/* Landscape orientation optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .spotify-player {
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .spotify-player-content {
+    gap: 0.5rem;
+  }
+  
+  .spotify-track-image {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .spotify-track-name {
+    font-size: 0.8rem;
+  }
+  
+  .spotify-track-artist {
+    font-size: 0.7rem;
+  }
+}
