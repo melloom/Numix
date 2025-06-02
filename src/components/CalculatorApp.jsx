@@ -115,6 +115,15 @@ const CalculatorApp = () => {
     const newSoundState = !soundEnabled
     setSoundEnabled(newSoundState)
     setSoundEnabledState(newSoundState)
+    
+    // Play a test sound when enabling to confirm it works
+    if (newSoundState) {
+      // Small delay to ensure the setting is updated
+      setTimeout(async () => {
+        const { playSuccess } = await import('../utils/sounds')
+        playSuccess()
+      }, 100)
+    }
   }
 
   const toggleHideAddressBar = () => {

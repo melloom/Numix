@@ -17,6 +17,9 @@
   -webkit-tap-highlight-color: transparent;
   position: relative;
   overflow: hidden;
+  /* Enhanced mobile touch target size */
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .calc-button::before {
@@ -29,6 +32,21 @@
   background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
   opacity: 0;
   transition: opacity 0.2s ease;
+}
+
+/* Enhanced visual feedback for mobile */
+.calc-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+  pointer-events: none;
 }
 
 .calc-button:hover::before {
@@ -44,6 +62,14 @@
 .calc-button:active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
+}
+
+/* Enhanced active state with ripple effect for mobile */
+.calc-button:active::after {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: all 0.4s ease;
 }
 
 .calc-button:disabled {
@@ -84,6 +110,10 @@
   transform: translateY(-2px) scale(1.02);
 }
 
+.calc-button--operator::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+
 .calc-button--danger {
   background: var(--accent-danger);
   color: white;
@@ -92,6 +122,10 @@
 
 .calc-button--danger:hover {
   opacity: 0.9;
+}
+
+.calc-button--danger::after {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 /* Grid span classes */
@@ -107,7 +141,7 @@
   grid-column: span 4;
 }
 
-/* Responsive adjustments */
+/* Enhanced mobile responsiveness */
 @media (max-width: 480px) {
   .calc-button {
     padding: 1.25rem;
@@ -115,6 +149,9 @@
     min-height: 4rem;
     border-radius: 14px;
     font-weight: 600;
+    /* Better touch target on mobile */
+    min-width: 56px;
+    min-height: 56px;
   }
 }
 
@@ -136,7 +173,7 @@
   }
 }
 
-/* Touch feedback */
+/* Enhanced touch feedback for mobile devices */
 @media (hover: none) and (pointer: coarse) {
   .calc-button:hover {
     transform: none;
@@ -144,16 +181,46 @@
   }
   
   .calc-button:active {
-    transform: scale(0.98);
+    transform: scale(0.95);
     background: var(--bg-tertiary);
+    transition: all 0.1s ease;
   }
   
   .calc-button--operator:active {
     background: var(--accent-secondary);
+    transform: scale(0.95);
   }
   
   .calc-button--secondary:active {
     background: var(--bg-secondary);
+    transform: scale(0.95);
+  }
+  
+  .calc-button--danger:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  /* Enhanced ripple effect on mobile */
+  .calc-button:active::after {
+    width: 120%;
+    height: 120%;
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+}
+
+/* PWA and standalone mode optimizations */
+@media (display-mode: standalone) {
+  .calc-button {
+    /* Slightly larger touch targets in PWA mode */
+    min-height: 4.5rem;
+    padding: 1.5rem;
+  }
+  
+  .calc-button:active {
+    /* More pronounced feedback in PWA */
+    transform: scale(0.92);
   }
 }
 
@@ -161,4 +228,50 @@
 .calc-button:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
+}
+
+/* Animation for button press feedback when sound is disabled */
+@keyframes buttonPressAnimation {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5);
+  }
+  50% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+}
+
+/* Enhanced visual feedback when sound is disabled */
+.calc-button.sound-disabled:active {
+  animation: buttonPressAnimation 0.3s ease;
+}
+
+/* Special feedback for important actions */
+.calc-button--operator.sound-disabled:active {
+  animation: buttonPressAnimation 0.3s ease;
+  box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5);
+}
+
+@keyframes operatorPressAnimation {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5);
+  }
+  50% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 113, 133, 0);
+  }
+}
+
+.calc-button--operator.sound-disabled:active {
+  animation: operatorPressAnimation 0.3s ease;
 } 

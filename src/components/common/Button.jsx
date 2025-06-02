@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { playButtonClick, playButtonHover, resumeAudio } from '../../utils/sounds'
+import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled } from '../../utils/sounds'
 import './Button.css'
 
 const Button = ({ 
@@ -15,21 +15,27 @@ const Button = ({
   enableSound = true,
   ...props 
 }) => {
+  const soundDisabled = !isSoundEnabled() || !enableSound
+  
   const buttonClass = [
     'calc-button',
     `calc-button--${variant}`,
+    soundDisabled ? 'sound-disabled' : '',
     className
   ].filter(Boolean).join(' ')
 
   const handleClick = useCallback(async (e) => {
     if (disabled) return
     
+    // Handle user interaction for mobile/PWA audio
+    handleUserInteraction()
+    
     // Resume audio context on user interaction
     await resumeAudio()
     
     // Play click sound
     if (enableSound) {
-      playButtonClick()
+      await playButtonClick()
     }
     
     // Call the original onClick handler
@@ -41,17 +47,23 @@ const Button = ({
   const handleMouseEnter = useCallback(async () => {
     if (disabled) return
     
+    // Handle user interaction for mobile/PWA audio
+    handleUserInteraction()
+    
     // Resume audio context
     await resumeAudio()
     
-    // Play subtle hover sound
+    // Play subtle hover sound (only on non-touch devices)
     if (enableSound) {
-      playButtonHover()
+      await playButtonHover()
     }
   }, [disabled, enableSound])
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
+    
+    // Handle user interaction for mobile/PWA audio
+    handleUserInteraction()
     
     if (onMouseDown) {
       onMouseDown(e)
@@ -68,6 +80,9 @@ const Button = ({
 
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
+    
+    // Handle user interaction for mobile/PWA audio
+    handleUserInteraction()
     
     if (onTouchStart) {
       onTouchStart(e)
