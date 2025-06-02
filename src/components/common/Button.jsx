@@ -24,18 +24,18 @@ const Button = ({
     className
   ].filter(Boolean).join(' ')
 
-  const handleClick = useCallback(async (e) => {
+  const handleClick = useCallback((e) => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio FIRST
-    await handleUserInteraction()
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
     
-    // Resume audio context on user interaction
-    await resumeAudio()
+    // Resume audio context - INSTANT
+    resumeAudio()
     
-    // Play click sound
+    // Play click sound - INSTANT, no await
     if (enableSound) {
-      await playButtonClick()
+      playButtonClick()
     }
     
     // Call the original onClick handler
@@ -44,26 +44,26 @@ const Button = ({
     }
   }, [onClick, disabled, enableSound])
 
-  const handleMouseEnter = useCallback(async () => {
+  const handleMouseEnter = useCallback(() => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio
-    await handleUserInteraction()
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
     
-    // Resume audio context
-    await resumeAudio()
+    // Resume audio context - INSTANT  
+    resumeAudio()
     
-    // Play subtle hover sound (only on non-touch devices)
+    // Play subtle hover sound - INSTANT, no await
     if (enableSound) {
-      await playButtonHover()
+      playButtonHover()
     }
   }, [disabled, enableSound])
 
-  const handleMouseDown = useCallback(async (e) => {
+  const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio
-    await handleUserInteraction()
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
     
     if (onMouseDown) {
       onMouseDown(e)
@@ -78,12 +78,12 @@ const Button = ({
     }
   }, [onMouseUp, disabled])
 
-  const handleTouchStart = useCallback(async (e) => {
+  const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio - VERY IMPORTANT for mobile
-    await handleUserInteraction()
-    await resumeAudio()
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
+    resumeAudio()
     
     if (onTouchStart) {
       onTouchStart(e)

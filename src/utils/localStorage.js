@@ -205,7 +205,6 @@ export const settingsManager = {
       hasSeenTutorial: false,
       lastCalculatorTutorial: '',
       hideAddressBarMobile: true, // Hide address bar on mobile devices by default
-      mobileAudioEnabled: true, // New setting for mobile audio initialization
       scientificMode: 'deg',
       programmerBase: 'dec',
       converterCategory: 'length'
