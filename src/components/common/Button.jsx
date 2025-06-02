@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react'
+import React, { useCallback } from 'react'
 import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled } from '../../utils/sounds'
 import './Button.css'
 
@@ -16,79 +16,60 @@ const Button = ({
   ...props 
 }) => {
   const soundDisabled = !isSoundEnabled() || !enableSound
-  const lastClickTime = useRef(0)
   
   const buttonClass = [
     'calc-button',
-    'calc-button--fast',
     `calc-button--${variant}`,
     soundDisabled ? 'sound-disabled' : '',
     className
   ].filter(Boolean).join(' ')
 
-  // ULTRA-FAST click handler - no debouncing, instant response
   const handleClick = useCallback((e) => {
     if (disabled) return
     
-    const now = Date.now()
-    // Allow rapid clicking - no minimum time between clicks
-    lastClickTime.current = now
-    
-    // Immediate audio context setup - NO await, NO delays
+    // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
+    
+    // Resume audio context - INSTANT
     resumeAudio()
     
-    // Instant sound - fire and forget
+    // Play click sound - INSTANT, no await
     if (enableSound) {
       playButtonClick()
     }
     
-    // Immediate callback execution
+    // Call the original onClick handler
     if (onClick) {
       onClick(e)
     }
   }, [onClick, disabled, enableSound])
 
-  // Ultra-fast mouse down - immediate response
+  const handleMouseEnter = useCallback(() => {
+    if (disabled) return
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
+    
+    // Resume audio context - INSTANT  
+    resumeAudio()
+    
+    // Play subtle hover sound - INSTANT, no await
+    if (enableSound) {
+      playButtonHover()
+    }
+  }, [disabled, enableSound])
+
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    // Instant audio setup
+    // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
-    resumeAudio()
     
     if (onMouseDown) {
       onMouseDown(e)
     }
   }, [onMouseDown, disabled])
 
-  // Ultra-fast touch start - immediate response
-  const handleTouchStart = useCallback((e) => {
-    if (disabled) return
-    
-    // Prevent default to avoid delays
-    e.preventDefault()
-    
-    // Instant audio setup
-    handleUserInteraction()
-    resumeAudio()
-    
-    // Immediate sound for touch
-    if (enableSound) {
-      playButtonClick()
-    }
-    
-    if (onTouchStart) {
-      onTouchStart(e)
-    }
-    
-    // Trigger click immediately on touch for fastest response
-    if (onClick) {
-      onClick(e)
-    }
-  }, [onTouchStart, disabled, enableSound, onClick])
-
-  // Fast mouse up
   const handleMouseUp = useCallback((e) => {
     if (disabled) return
     
@@ -97,7 +78,18 @@ const Button = ({
     }
   }, [onMouseUp, disabled])
 
-  // Fast touch end
+  const handleTouchStart = useCallback((e) => {
+    if (disabled) return
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
+    resumeAudio()
+    
+    if (onTouchStart) {
+      onTouchStart(e)
+    }
+  }, [onTouchStart, disabled])
+
   const handleTouchEnd = useCallback((e) => {
     if (disabled) return
     
@@ -105,17 +97,6 @@ const Button = ({
       onTouchEnd(e)
     }
   }, [onTouchEnd, disabled])
-
-  // Minimal hover for desktop only
-  const handleMouseEnter = useCallback(() => {
-    if (disabled) return
-    
-    // Only on non-touch devices
-    if (window.matchMedia('(hover: hover)').matches) {
-      handleUserInteraction()
-      resumeAudio()
-    }
-  }, [disabled])
 
   return (
     <button
@@ -127,11 +108,6 @@ const Button = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       disabled={disabled}
-      style={{
-        // Override any CSS delays for instant response
-        transition: 'none',
-        WebkitTapHighlightColor: 'transparent'
-      }}
       {...props}
     >
       {children}
