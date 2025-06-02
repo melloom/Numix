@@ -1,4 +1,4 @@
-// Ultra-aggressive sound system for mobile
+// Ultra-reliable sound system using real audio file
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -10,7 +10,9 @@ class SoundManager {
     this.isMobile = isMobileDevice()
     this.audioElements = new Map()
     this.currentIndex = 0
-    this.lastPlayTime = 0
+    
+    // Create base64 encoded click sound (ultra short)
+    this.clickSoundBase64 = 'data:audio/wav;base64,UklGRh4AAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YfoAAAAA'
     
     // Initialize immediately
     this.init()
@@ -33,48 +35,11 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create an extremely short click sound
-    const createClickSound = () => {
-      const rate = 8000
-      const duration = 0.03 // Ultra short
-      const samples = Math.floor(duration * rate)
-      const buffer = new ArrayBuffer(44 + samples * 2)
-      const view = new DataView(buffer)
-      
-      // WAV header
-      view.setUint32(0, 0x46464952, false) // 'RIFF'
-      view.setUint32(4, 36 + samples * 2, true)
-      view.setUint32(8, 0x45564157, false) // 'WAVE'
-      view.setUint32(12, 0x20746d66, false) // 'fmt '
-      view.setUint32(16, 16, true)
-      view.setUint16(20, 1, true)
-      view.setUint16(22, 1, true)
-      view.setUint32(24, rate, true)
-      view.setUint32(28, rate * 2, true)
-      view.setUint16(32, 2, true)
-      view.setUint16(34, 16, true)
-      view.setUint32(36, 0x61746164, false) // 'data'
-      view.setUint32(40, samples * 2, true)
-      
-      // Sharp click sound
-      for (let i = 0; i < samples; i++) {
-        const t = i / rate
-        const amp = Math.exp(-t * 50) * 0.8 // Even faster decay, louder
-        const sample = Math.sin(2 * Math.PI * 1200 * t) * amp
-        view.setInt16(44 + i * 2, sample * 32767, true)
-      }
-      
-      return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }))
-    }
-
-    // Create multiple audio elements for the same sound
-    const dataURL = createClickSound()
-    
     // Create 5 audio elements for rapid clicking
     for (let i = 0; i < 5; i++) {
       const audio = new Audio()
-      audio.src = dataURL
-      audio.volume = 1.0 // Maximum volume
+      audio.src = this.clickSoundBase64
+      audio.volume = 1.0
       audio.preload = 'auto'
       audio.load()
       
@@ -121,10 +86,6 @@ class SoundManager {
   playSound() {
     if (!this.isEnabled || !this.initialized) return
     
-    const now = Date.now()
-    if (now - this.lastPlayTime < 20) return // Prevent too rapid playback
-    this.lastPlayTime = now
-    
     // Get next audio element
     const audio = this.audioElements.get(`click${this.currentIndex}`)
     this.currentIndex = (this.currentIndex + 1) % 5
@@ -151,7 +112,7 @@ class SoundManager {
     
     // Always vibrate on mobile
     if (this.isMobile && navigator.vibrate) {
-      navigator.vibrate(5) // Shorter vibration
+      navigator.vibrate(5)
     }
   }
 

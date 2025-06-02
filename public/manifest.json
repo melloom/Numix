@@ -12,6 +12,8 @@
   "lang": "en",
   "scope": "./",
   "prefer_related_applications": false,
+  "permissions": ["audio"],
+  "features": ["audio"],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
