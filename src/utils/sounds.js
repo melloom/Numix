@@ -1,4 +1,4 @@
-// Ultra-reliable sound system for PWA
+// Simplified and reliable sound system for PWA
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -12,6 +12,7 @@ class SoundManager {
     this.currentIndex = 0
     this.audioContext = null
     this.isUnlocking = false
+    this.isPlaying = false
     this.lastPlayTime = 0
     
     // Use the specific sound file
@@ -38,22 +39,12 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create 8 audio elements for better reliability
-    for (let i = 0; i < 8; i++) {
+    // Create 3 audio elements - simple and reliable
+    for (let i = 0; i < 3; i++) {
       const audio = new Audio()
       audio.src = this.soundFile
       audio.volume = 0.8
       audio.preload = 'auto'
-      audio.crossOrigin = 'anonymous'
-      
-      // Add event listeners for better debugging
-      audio.addEventListener('canplaythrough', () => {
-        // Audio is ready to play
-      })
-      
-      audio.addEventListener('error', (e) => {
-        console.warn('Audio error:', e)
-      })
       
       // Load the audio
       audio.load()
@@ -82,20 +73,19 @@ class SoundManager {
         this.audioContext.resume()
       }
       
-      // Try to unlock all audio elements silently
-      this.audioElements.forEach((audio, index) => {
-        setTimeout(() => {
-          audio.play().then(() => {
-            audio.pause()
-            audio.currentTime = 0
-          }).catch(() => {})
-        }, index * 10) // Stagger the unlocking
-      })
+      // Try to unlock only the first audio element silently
+      const firstAudio = this.audioElements[0]
+      if (firstAudio) {
+        firstAudio.play().then(() => {
+          firstAudio.pause()
+          firstAudio.currentTime = 0
+        }).catch(() => {})
+      }
       
       // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 200)
+      }, 150)
       
       // Remove listeners
       events.forEach(eventType => {
@@ -113,46 +103,49 @@ class SoundManager {
     })
   }
 
-  async playSound() {
-    if (!this.isEnabled || !this.initialized || this.isUnlocking) return
+  playSound() {
+    if (!this.isEnabled || !this.initialized || this.isUnlocking || this.isPlaying) return
     
     // Prevent too rapid playing
     const now = Date.now()
-    if (now - this.lastPlayTime < 50) return
+    if (now - this.lastPlayTime < 100) return
     this.lastPlayTime = now
+    
+    this.isPlaying = true
     
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
-      await this.audioContext.resume()
+      this.audioContext.resume()
     }
     
-    // Try multiple audio elements to ensure playback
-    let soundPlayed = false
-    let attempts = 0
+    // Get next audio element
+    const audio = this.audioElements[this.currentIndex]
+    this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
     
-    while (!soundPlayed && attempts < this.audioElements.length) {
-      const audio = this.audioElements[this.currentIndex]
-      this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+    if (audio) {
+      // Stop and reset
+      audio.pause()
+      audio.currentTime = 0
       
-      if (audio && audio.readyState >= 2) { // HAVE_CURRENT_DATA or better
-        try {
-          // Stop and reset
-          audio.pause()
-          audio.currentTime = 0
-          
-          // Play
-          const playPromise = audio.play()
-          if (playPromise) {
-            await playPromise
-            soundPlayed = true
-          }
-        } catch (e) {
-          // Try next audio element
-          attempts++
-        }
+      // Play
+      const playPromise = audio.play()
+      if (playPromise) {
+        playPromise.then(() => {
+          // Sound played successfully
+        }).catch(() => {
+          // Silent fail
+        }).finally(() => {
+          // Always reset playing state
+          setTimeout(() => {
+            this.isPlaying = false
+          }, 50)
+        })
       } else {
-        attempts++
+        // Reset playing state immediately if no promise
+        this.isPlaying = false
       }
+    } else {
+      this.isPlaying = false
     }
     
     // Always vibrate on mobile as feedback
@@ -172,7 +165,7 @@ class SoundManager {
       }
       
       // Test sound only if not unlocking
-      if (!this.isUnlocking) {
+      if (!this.isUnlocking && !this.isPlaying) {
         setTimeout(() => this.playSound(), 200)
       }
     }
@@ -204,10 +197,10 @@ class SoundManager {
         this.audioContext.resume()
       }
       
-      // Set unlocking to false after a longer delay
+      // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 200)
+      }, 150)
     }
   }
 }
