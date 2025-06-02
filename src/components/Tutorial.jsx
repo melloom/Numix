@@ -188,10 +188,9 @@ const Tutorial = ({ calculatorType = 'standard' }) => {
     // Check if tutorial should be shown
     const settings = settingsManager.getSettings()
     const hasSeenTutorial = settings.hasSeenTutorial || false
-    const lastCalculatorTutorial = settings.lastCalculatorTutorial || ''
     
-    // Show tutorial if never seen or switching to different calculator type
-    if (!hasSeenTutorial || (hasSeenTutorial && lastCalculatorTutorial !== calculatorType)) {
+    // Only show tutorial if user has NEVER seen it before
+    if (!hasSeenTutorial) {
       // Small delay to let the app render first
       setTimeout(() => {
         setIsVisible(true)
@@ -265,8 +264,7 @@ const Tutorial = ({ calculatorType = 'standard' }) => {
   const finishTutorial = () => {
     setIsVisible(false)
     settingsManager.updateSettings({ 
-      hasSeenTutorial: true,
-      lastCalculatorTutorial: calculatorType
+      hasSeenTutorial: true
     })
     
     // Remove any remaining highlights
