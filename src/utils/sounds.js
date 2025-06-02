@@ -12,6 +12,7 @@ class SoundManager {
     this.currentIndex = 0
     this.audioContext = null
     this.isUnlocking = false
+    this.lastPlayTime = 0
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
@@ -37,12 +38,22 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create 5 audio elements for rapid clicking using the MP3 file
-    for (let i = 0; i < 5; i++) {
+    // Create 8 audio elements for better reliability
+    for (let i = 0; i < 8; i++) {
       const audio = new Audio()
       audio.src = this.soundFile
-      audio.volume = 0.8 // Slightly lower volume for better experience
+      audio.volume = 0.8
       audio.preload = 'auto'
+      audio.crossOrigin = 'anonymous'
+      
+      // Add event listeners for better debugging
+      audio.addEventListener('canplaythrough', () => {
+        // Audio is ready to play
+      })
+      
+      audio.addEventListener('error', (e) => {
+        console.warn('Audio error:', e)
+      })
       
       // Load the audio
       audio.load()
@@ -72,17 +83,19 @@ class SoundManager {
       }
       
       // Try to unlock all audio elements silently
-      this.audioElements.forEach((audio) => {
-        audio.play().then(() => {
-          audio.pause()
-          audio.currentTime = 0
-        }).catch(() => {})
+      this.audioElements.forEach((audio, index) => {
+        setTimeout(() => {
+          audio.play().then(() => {
+            audio.pause()
+            audio.currentTime = 0
+          }).catch(() => {})
+        }, index * 10) // Stagger the unlocking
       })
       
       // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 100)
+      }, 200)
       
       // Remove listeners
       events.forEach(eventType => {
@@ -100,33 +113,49 @@ class SoundManager {
     })
   }
 
-  playSound() {
+  async playSound() {
     if (!this.isEnabled || !this.initialized || this.isUnlocking) return
+    
+    // Prevent too rapid playing
+    const now = Date.now()
+    if (now - this.lastPlayTime < 50) return
+    this.lastPlayTime = now
     
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume()
+      await this.audioContext.resume()
     }
     
-    // Get next audio element
-    const audio = this.audioElements[this.currentIndex]
-    this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+    // Try multiple audio elements to ensure playback
+    let soundPlayed = false
+    let attempts = 0
     
-    if (!audio) return
-    
-    // Stop and reset
-    audio.pause()
-    audio.currentTime = 0
-    
-    // Play
-    const playPromise = audio.play()
-    if (playPromise) {
-      playPromise.catch(() => {
-        // Silently ignore errors
-      })
+    while (!soundPlayed && attempts < this.audioElements.length) {
+      const audio = this.audioElements[this.currentIndex]
+      this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+      
+      if (audio && audio.readyState >= 2) { // HAVE_CURRENT_DATA or better
+        try {
+          // Stop and reset
+          audio.pause()
+          audio.currentTime = 0
+          
+          // Play
+          const playPromise = audio.play()
+          if (playPromise) {
+            await playPromise
+            soundPlayed = true
+          }
+        } catch (e) {
+          // Try next audio element
+          attempts++
+        }
+      } else {
+        attempts++
+      }
     }
     
-    // Always vibrate on mobile
+    // Always vibrate on mobile as feedback
     if (this.isMobile && navigator.vibrate) {
       navigator.vibrate(8)
     }
@@ -144,7 +173,7 @@ class SoundManager {
       
       // Test sound only if not unlocking
       if (!this.isUnlocking) {
-        setTimeout(() => this.playSound(), 100)
+        setTimeout(() => this.playSound(), 200)
       }
     }
   }
@@ -175,10 +204,10 @@ class SoundManager {
         this.audioContext.resume()
       }
       
-      // Set unlocking to false after a short delay
+      // Set unlocking to false after a longer delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 100)
+      }, 200)
     }
   }
 }
