@@ -1,4 +1,4 @@
-// Responsive sound system for PWA - every click makes sound
+// Robust sound system for PWA - prevents audio elements from getting stuck
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -12,6 +12,7 @@ class SoundManager {
     this.currentIndex = 0
     this.audioContext = null
     this.isUnlocking = false
+    this.clickCount = 0
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
@@ -37,12 +38,23 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create 5 audio elements for rapid clicking without conflicts
-    for (let i = 0; i < 5; i++) {
+    // Create 10 audio elements for better reliability
+    for (let i = 0; i < 10; i++) {
       const audio = new Audio()
       audio.src = this.soundFile
       audio.volume = 0.8
       audio.preload = 'auto'
+      
+      // Add error handling
+      audio.addEventListener('error', () => {
+        // Recreate this audio element if it errors
+        setTimeout(() => this.recreateAudioElement(i), 100)
+      })
+      
+      // Reset audio when it ends
+      audio.addEventListener('ended', () => {
+        audio.currentTime = 0
+      })
       
       // Load the audio
       audio.load()
@@ -55,6 +67,26 @@ class SoundManager {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)()
     } catch (e) {
       console.warn('Web Audio API not supported')
+    }
+  }
+
+  recreateAudioElement(index) {
+    if (index >= 0 && index < this.audioElements.length) {
+      const audio = new Audio()
+      audio.src = this.soundFile
+      audio.volume = 0.8
+      audio.preload = 'auto'
+      
+      audio.addEventListener('error', () => {
+        setTimeout(() => this.recreateAudioElement(index), 100)
+      })
+      
+      audio.addEventListener('ended', () => {
+        audio.currentTime = 0
+      })
+      
+      audio.load()
+      this.audioElements[index] = audio
     }
   }
 
@@ -104,35 +136,79 @@ class SoundManager {
   playSound() {
     if (!this.isEnabled || !this.initialized || this.isUnlocking) return
     
+    this.clickCount++
+    
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume()
     }
     
-    // Get next audio element - rotate through all elements
-    const audio = this.audioElements[this.currentIndex]
-    this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+    // Reset all audio elements every 20 clicks to prevent stuck state
+    if (this.clickCount % 20 === 0) {
+      this.resetAllAudio()
+    }
     
-    if (audio) {
-      // Stop and reset current audio
-      audio.pause()
-      audio.currentTime = 0
+    // Try up to 3 different audio elements
+    let attempts = 0
+    let played = false
+    
+    while (!played && attempts < 3) {
+      const audio = this.audioElements[this.currentIndex]
+      this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
       
-      // Play immediately - don't wait for promises
-      audio.play().catch(() => {
-        // Silent fail - try next audio element if this one fails
-        const nextAudio = this.audioElements[this.currentIndex]
-        if (nextAudio) {
-          nextAudio.pause()
-          nextAudio.currentTime = 0
-          nextAudio.play().catch(() => {})
+      if (audio && audio.readyState >= 1) { // HAVE_METADATA or better
+        try {
+          // Stop and reset current audio
+          audio.pause()
+          audio.currentTime = 0
+          
+          // Play immediately
+          const playPromise = audio.play()
+          if (playPromise) {
+            playPromise.then(() => {
+              played = true
+            }).catch(() => {
+              // Try next audio element
+              attempts++
+            })
+          } else {
+            played = true
+          }
+        } catch (e) {
+          attempts++
         }
-      })
+      } else {
+        attempts++
+      }
+    }
+    
+    // If all attempts failed, recreate audio elements
+    if (!played) {
+      setTimeout(() => this.recreateAllAudio(), 50)
     }
     
     // Always vibrate on mobile as feedback
     if (this.isMobile && navigator.vibrate) {
       navigator.vibrate(8)
+    }
+  }
+
+  resetAllAudio() {
+    this.audioElements.forEach(audio => {
+      try {
+        audio.pause()
+        audio.currentTime = 0
+        audio.load()
+      } catch (e) {
+        // Ignore errors during reset
+      }
+    })
+  }
+
+  recreateAllAudio() {
+    // Recreate all audio elements if they get stuck
+    for (let i = 0; i < this.audioElements.length; i++) {
+      this.recreateAudioElement(i)
     }
   }
 
