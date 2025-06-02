@@ -11,7 +11,7 @@ const baseTutorialSteps = [
     showOverlay: true,
     actions: [
       { text: 'Take Tour', type: 'primary', action: 'next' },
-      { text: 'Skip', type: 'secondary', action: 'skip' }
+      { text: 'Skip Tutorial', type: 'secondary', action: 'skip' }
     ]
   },
   {
@@ -23,7 +23,7 @@ const baseTutorialSteps = [
     showOverlay: true,
     actions: [
       { text: 'Next', type: 'primary', action: 'next' },
-      { text: 'Skip Tour', type: 'secondary', action: 'skip' }
+      { text: 'Skip All', type: 'secondary', action: 'skip' }
     ]
   },
   {
@@ -185,20 +185,20 @@ const Tutorial = ({ calculatorType = 'standard' }) => {
   }, [calculatorType])
 
   useEffect(() => {
-    // Check if tutorial should be shown
+    // Check if tutorial should be shown - only for completely new users
     const settings = settingsManager.getSettings()
     const hasSeenTutorial = settings.hasSeenTutorial || false
-    const lastCalculatorTutorial = settings.lastCalculatorTutorial || ''
     
-    // Show tutorial if never seen or switching to different calculator type
-    if (!hasSeenTutorial || (hasSeenTutorial && lastCalculatorTutorial !== calculatorType)) {
+    // Only show tutorial if user has never seen it at all
+    // Remove the per-calculator-type logic to make it truly one-time
+    if (!hasSeenTutorial) {
       // Small delay to let the app render first
       setTimeout(() => {
         setIsVisible(true)
         setCurrentStep(0)
       }, 1000)
     }
-  }, [calculatorType])
+  }, [calculatorType, tutorialSteps]) // Removed dependency that caused re-triggering
 
   useEffect(() => {
     if (isVisible) {
@@ -264,9 +264,10 @@ const Tutorial = ({ calculatorType = 'standard' }) => {
 
   const finishTutorial = () => {
     setIsVisible(false)
+    // Mark tutorial as seen globally - no longer track per calculator type
     settingsManager.updateSettings({ 
-      hasSeenTutorial: true,
-      lastCalculatorTutorial: calculatorType
+      hasSeenTutorial: true
+      // Removed lastCalculatorTutorial to make it truly one-time
     })
     
     // Remove any remaining highlights
