@@ -1,4 +1,4 @@
-// Ultra-reliable sound system using real audio file
+// Ultra-reliable sound system for PWA
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -10,6 +10,7 @@ class SoundManager {
     this.isMobile = isMobileDevice()
     this.audioElements = new Map()
     this.currentIndex = 0
+    this.audioContext = null
     
     // Create base64 encoded click sound (ultra short)
     this.clickSoundBase64 = 'data:audio/wav;base64,UklGRh4AAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YfoAAAAA'
@@ -45,6 +46,13 @@ class SoundManager {
       
       this.audioElements.set(`click${i}`, audio)
     }
+
+    // Create Web Audio context for better control
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)()
+    } catch (e) {
+      console.warn('Web Audio API not supported')
+    }
   }
 
   setupInteractionListeners() {
@@ -53,6 +61,11 @@ class SoundManager {
     const unlock = () => {
       if (this.hasUserInteracted) return
       this.hasUserInteracted = true
+      
+      // Resume audio context if available
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
+      }
       
       // Try to unlock all audio elements
       this.audioElements.forEach((audio) => {
@@ -85,6 +98,11 @@ class SoundManager {
 
   playSound() {
     if (!this.isEnabled || !this.initialized) return
+    
+    // Resume audio context if suspended
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume()
+    }
     
     // Get next audio element
     const audio = this.audioElements.get(`click${this.currentIndex}`)
@@ -121,6 +139,11 @@ class SoundManager {
     settingsManager.updateSettings({ soundEnabled: enabled })
     
     if (enabled) {
+      // Resume audio context if suspended
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
+      }
+      
       // Test sound multiple times
       for (let i = 0; i < 3; i++) {
         setTimeout(() => this.playSound(), i * 100)
@@ -147,6 +170,12 @@ class SoundManager {
   handleUserInteraction() {
     if (!this.hasUserInteracted) {
       this.hasUserInteracted = true
+      
+      // Resume audio context if suspended
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
+      }
+      
       // Force test sound
       this.playSound()
     }
