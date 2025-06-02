@@ -1,8 +1,8 @@
-// Single-audio sound system - prevents multiple sounds completely
+// Ultra-safe sound system with strict debouncing and crash prevention
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
-class SingleSoundManager {
+class SafeSoundManager {
   constructor() {
     this.isEnabled = false
     this.hasUserInteracted = false
@@ -12,6 +12,9 @@ class SingleSoundManager {
     this.lastPlayTime = 0
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
     this.isLocked = false
+    this.lockTimeout = null
+    this.minInterval = 200 // Increased minimum interval between sounds
+    this.maxLockTime = 1000 // Maximum lock time
     
     this.init()
   }
@@ -28,45 +31,67 @@ class SingleSoundManager {
     } catch (error) {
       console.warn('Sound init failed silently')
       this.isEnabled = false
+      this.audio = null
     }
   }
 
   createSingleAudio() {
     try {
+      // Clean up any existing audio
+      if (this.audio) {
+        this.audio.pause()
+        this.audio.src = ''
+        this.audio = null
+      }
+      
       // Create only ONE audio element
       this.audio = new Audio()
       this.audio.src = this.soundFile
-      this.audio.volume = 0.8
+      this.audio.volume = 0.6 // Reduced volume to prevent harsh sounds
       this.audio.preload = 'none'
       this.audio.muted = true
       
-      // Critical: prevent multiple plays
+      // Critical: prevent multiple plays with strict event handling
       this.audio.addEventListener('ended', () => {
-        this.isCurrentlyPlaying = false
-        this.isLocked = false
-        try {
-          this.audio.currentTime = 0
-        } catch (e) {}
-      })
+        this.clearLock()
+      }, { passive: true })
       
-      this.audio.addEventListener('error', () => {
-        this.isCurrentlyPlaying = false
-        this.isLocked = false
-      })
-      
-      // Important: stop any previous play attempts
-      this.audio.addEventListener('play', () => {
-        this.isCurrentlyPlaying = true
-      })
+      this.audio.addEventListener('error', (e) => {
+        console.warn('Audio error:', e)
+        this.clearLock()
+      }, { passive: true })
       
       this.audio.addEventListener('pause', () => {
-        this.isCurrentlyPlaying = false
-        this.isLocked = false
-      })
+        this.clearLock()
+      }, { passive: true })
+      
+      // Add abort handler for network issues
+      this.audio.addEventListener('abort', () => {
+        this.clearLock()
+      }, { passive: true })
       
     } catch (error) {
-      console.warn('Audio creation failed silently')
+      console.warn('Audio creation failed silently:', error)
       this.audio = null
+      this.isEnabled = false
+    }
+  }
+
+  clearLock() {
+    this.isCurrentlyPlaying = false
+    this.isLocked = false
+    
+    if (this.lockTimeout) {
+      clearTimeout(this.lockTimeout)
+      this.lockTimeout = null
+    }
+    
+    try {
+      if (this.audio && this.audio.currentTime > 0) {
+        this.audio.currentTime = 0
+      }
+    } catch (e) {
+      // Ignore currentTime errors
     }
   }
 
@@ -80,74 +105,92 @@ class SingleSoundManager {
           this.audio.muted = false
           this.audio.preload = 'auto'
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Audio unlock failed:', e)
+      }
       
       // Remove listeners immediately
       document.removeEventListener('touchstart', unlock, true)
       document.removeEventListener('click', unlock, true)
+      document.removeEventListener('pointerdown', unlock, true)
     }
     
+    // Multiple event types for better coverage
     document.addEventListener('touchstart', unlock, { once: true, passive: true, capture: true })
     document.addEventListener('click', unlock, { once: true, passive: true, capture: true })
+    document.addEventListener('pointerdown', unlock, { once: true, passive: true, capture: true })
   }
 
   playSound() {
-    // ULTRA STRICT: Multiple checks to prevent overlapping
     const now = Date.now()
     
-    // Rate limit: minimum 100ms between sounds
-    if (now - this.lastPlayTime < 100) return
+    // ULTRA STRICT: Multiple checks to prevent overlapping and crashes
+    if (!this.isEnabled || !this.hasUserInteracted) return
+    if (this.isLocked || this.isCurrentlyPlaying) return
     
-    // Check if locked, playing, or not ready
-    if (this.isLocked || this.isCurrentlyPlaying || !this.isEnabled || !this.hasUserInteracted) return
+    // Stricter rate limiting
+    if (now - this.lastPlayTime < this.minInterval) return
     
     // Check if audio exists and is ready
-    if (!this.audio || this.audio.readyState < 2) return
+    if (!this.audio) return
     
     try {
+      // Additional safety check for readyState
+      if (this.audio.readyState < 2 && this.audio.readyState !== 4) return
+      
       // LOCK immediately to prevent any other plays
       this.isLocked = true
+      this.isCurrentlyPlaying = true
       this.lastPlayTime = now
       
-      // Force stop any current playback
-      this.audio.pause()
-      this.audio.currentTime = 0
+      // Safety timeout to force unlock if something goes wrong
+      this.lockTimeout = setTimeout(() => {
+        this.clearLock()
+      }, this.maxLockTime)
       
-      // Play with immediate handling
-      const playPromise = this.audio.play()
-      
-      if (playPromise) {
-        playPromise.then(() => {
-          // Success - keep locked until ended
-        }).catch(() => {
-          // Failed - unlock immediately
-          this.isLocked = false
-          this.isCurrentlyPlaying = false
-        })
+      // Force stop any current playback - with error handling
+      try {
+        this.audio.pause()
+        this.audio.currentTime = 0
+      } catch (timeError) {
+        // Some browsers don't allow currentTime changes immediately
       }
       
-      // Safety timeout to unlock if something goes wrong
-      setTimeout(() => {
-        if (this.isLocked && !this.isCurrentlyPlaying) {
-          this.isLocked = false
-        }
-      }, 500) // Max 500ms lock
+      // Play with comprehensive error handling
+      const playPromise = this.audio.play()
       
-      // Mobile vibration as backup feedback
-      if (this.isMobile && navigator.vibrate) {
-        try {
-          navigator.vibrate(8)
-        } catch (e) {}
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise.then(() => {
+          // Success - sound is playing
+        }).catch((playError) => {
+          console.warn('Play promise failed:', playError)
+          this.clearLock()
+          this.fallbackFeedback()
+        })
+      } else {
+        // Older browsers without promises
+        setTimeout(() => {
+          if (this.audio && this.audio.paused) {
+            this.clearLock()
+            this.fallbackFeedback()
+          }
+        }, 100)
       }
       
     } catch (error) {
-      // Always unlock on error
-      this.isLocked = false
-      this.isCurrentlyPlaying = false
-      
-      // Mobile vibration as fallback
-      if (this.isMobile && navigator.vibrate) {
-        try { navigator.vibrate(8) } catch (e) {}
+      console.warn('Play sound error:', error)
+      this.clearLock()
+      this.fallbackFeedback()
+    }
+  }
+
+  fallbackFeedback() {
+    // Mobile vibration as backup feedback
+    if (this.isMobile && navigator.vibrate) {
+      try {
+        navigator.vibrate(10) // Slightly longer vibration
+      } catch (e) {
+        // Ignore vibration errors
       }
     }
   }
@@ -159,22 +202,32 @@ class SingleSoundManager {
       
       if (enabled && !this.audio) {
         this.createSingleAudio()
+        this.setupUnlockListener()
+      } else if (!enabled) {
+        this.stopAllSounds()
       }
       
-      // Never auto-play test sounds
     } catch (error) {
-      // Ignore errors
+      console.warn('Set enabled error:', error)
     }
   }
 
   isAudioEnabled() {
-    return this.isEnabled
+    return this.isEnabled && this.audio !== null
   }
 
   // All play methods use the same restrictive playSound
-  playClick() { this.playSound() }
-  playSuccess() { this.playSound() }
-  playError() { this.playSound() }
+  playClick() { 
+    this.playSound() 
+  }
+  
+  playSuccess() { 
+    this.playSound() 
+  }
+  
+  playError() { 
+    this.playSound() 
+  }
   
   handleUserInteraction() {
     if (!this.hasUserInteracted) {
@@ -184,7 +237,9 @@ class SingleSoundManager {
           this.audio.muted = false
           this.audio.preload = 'auto'
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('User interaction handler error:', e)
+      }
     }
   }
 
@@ -195,25 +250,32 @@ class SingleSoundManager {
         this.audio.pause()
         this.audio.currentTime = 0
       }
-      this.isCurrentlyPlaying = false
-      this.isLocked = false
-    } catch (e) {}
+    } catch (e) {
+      // Ignore stop errors
+    }
+    this.clearLock()
   }
 
   // Cleanup
   destroy() {
     try {
       this.stopAllSounds()
-      this.audio = null
-    } catch (e) {}
+      if (this.audio) {
+        this.audio.src = ''
+        this.audio = null
+      }
+    } catch (e) {
+      // Ignore cleanup errors
+    }
   }
 }
 
-// Create single instance with fallback
+// Create single instance with comprehensive fallback
 let soundManager
 try {
-  soundManager = new SingleSoundManager()
+  soundManager = new SafeSoundManager()
 } catch (error) {
+  console.warn('Sound manager creation failed:', error)
   soundManager = {
     playClick: () => {},
     playSuccess: () => {},
@@ -226,44 +288,82 @@ try {
   }
 }
 
-// Ultra-safe exports
+// Ultra-safe exports with additional error wrapping
 export const playButtonClick = () => {
-  try { soundManager.playClick() } catch (e) {}
+  try { 
+    soundManager.playClick() 
+  } catch (e) { 
+    console.warn('Button click sound failed:', e)
+  }
 }
 
-export const playButtonHover = () => {} // Always disabled
+export const playButtonHover = () => {
+  // Always disabled for performance and to prevent spam
+}
 
 export const playSuccess = () => {
-  try { soundManager.playSuccess() } catch (e) {}
+  try { 
+    soundManager.playSuccess() 
+  } catch (e) { 
+    console.warn('Success sound failed:', e)
+  }
 }
 
 export const playError = () => {
-  try { soundManager.playError() } catch (e) {}
+  try { 
+    soundManager.playError() 
+  } catch (e) { 
+    console.warn('Error sound failed:', e)
+  }
 }
 
 export const setSoundEnabled = (enabled) => {
-  try { soundManager.setEnabled(enabled) } catch (e) {}
+  try { 
+    soundManager.setEnabled(enabled) 
+  } catch (e) { 
+    console.warn('Set sound enabled failed:', e)
+  }
 }
 
 export const isSoundEnabled = () => {
-  try { return soundManager.isAudioEnabled() } catch (e) { return false }
+  try { 
+    return soundManager.isAudioEnabled() 
+  } catch (e) { 
+    console.warn('Is sound enabled failed:', e)
+    return false 
+  }
 }
 
 export const handleUserInteraction = () => {
-  try { soundManager.handleUserInteraction() } catch (e) {}
+  try { 
+    soundManager.handleUserInteraction() 
+  } catch (e) { 
+    console.warn('Handle user interaction failed:', e)
+  }
 }
 
 export const resumeAudio = () => {
-  try { soundManager.handleUserInteraction() } catch (e) {}
+  try { 
+    soundManager.handleUserInteraction() 
+  } catch (e) { 
+    console.warn('Resume audio failed:', e)
+  }
 }
 
 export const forceMobileAudioInit = () => {
-  try { soundManager.handleUserInteraction() } catch (e) {}
+  try { 
+    soundManager.handleUserInteraction() 
+  } catch (e) { 
+    console.warn('Force mobile audio init failed:', e)
+  }
 }
 
-// Emergency stop function
 export const stopAllSounds = () => {
-  try { soundManager.stopAllSounds() } catch (e) {}
+  try { 
+    soundManager.stopAllSounds() 
+  } catch (e) { 
+    console.warn('Stop all sounds failed:', e)
+  }
 }
 
 export default soundManager 

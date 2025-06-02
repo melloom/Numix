@@ -386,7 +386,7 @@
   text-transform: capitalize;
 }
 
-/* Confirmation modal */
+/* Confirmation modal - fixed glitchy behavior */
 .confirm-modal-backdrop {
   position: fixed;
   top: 0;
@@ -399,6 +399,8 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
 }
 
 .confirm-modal {
@@ -409,7 +411,29 @@
   max-width: 400px;
   width: 100%;
   box-shadow: var(--shadow-lg);
-  animation: modalSlideIn 0.3s ease;
+  animation: confirmModalSlideIn 0.25s ease-out;
+  transform: translateY(0);
+  transition: none;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+  }
+  to { 
+    opacity: 1; 
+  }
+}
+
+@keyframes confirmModalSlideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .confirm-modal h3 {
@@ -437,9 +461,10 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   border: none;
   outline: none;
+  min-width: 80px;
 }
 
 .confirm-btn--danger {
@@ -452,6 +477,10 @@
   transform: translateY(-1px);
 }
 
+.confirm-btn--danger:active {
+  transform: translateY(0);
+}
+
 .confirm-btn--cancel {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
@@ -461,6 +490,10 @@
 .confirm-btn--cancel:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.confirm-btn--cancel:active {
+  transform: translateY(0);
 }
 
 /* Mobile responsive adjustments */

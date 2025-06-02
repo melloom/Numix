@@ -1,64 +1,209 @@
-import React, { useEffect } from "react";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import CalculatorApp from "./components/CalculatorApp";
-import { settingsManager } from "./utils/localStorage";
-import { initializeMobileOptimizations, isMobileDevice } from "./utils/mobileUtils";
-import { handleUserInteraction } from "./utils/sounds";
-import "./styles/App.css";
+import React, { useEffect, useState } from 'react'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { stopAllSounds } from './utils/sounds'
+import { isMobileDevice, setupMobileViewport, isAddressBarHidingSupported, hideAddressBar } from './utils/mobileUtils'
+import { settingsManager } from './utils/localStorage'
+import CalculatorApp from './components/CalculatorApp'
+import './styles/index.css'
+import './styles/App.css'
 
-function App() {
-  // iOS viewport height fix for better mobile experience
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-    
-    setVh();
-    window.addEventListener('resize', setVh);
-    window.addEventListener('orientationchange', setVh);
-    
-    return () => {
-      window.removeEventListener('resize', setVh);
-      window.removeEventListener('orientationchange', setVh);
-    };
-  }, []);
+// Error boundary component to catch crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
 
-  // Initialize mobile optimizations based on user settings
-  useEffect(() => {
-    if (isMobileDevice()) {
-      const settings = settingsManager.getSettings();
-      initializeMobileOptimizations({
-        hideAddressBar: settings.hideAddressBarMobile,
-        preventZoom: true,
-        optimizeViewport: true
-      });
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Calculator app crashed:', error, errorInfo)
+    
+    // Stop all sounds to prevent audio issues
+    try {
+      stopAllSounds()
+    } catch (e) {
+      console.warn('Failed to stop sounds after crash:', e)
     }
-  }, []);
+  }
 
-  // Set up early user interaction handling for better audio support
-  useEffect(() => {
-    const setupAudioInteraction = () => {
-      handleUserInteraction();
-    };
+  handleReset = () => {
+    this.setState({ hasError: false, error: null })
     
-    // Listen for any early user interactions
-    document.addEventListener('touchstart', setupAudioInteraction, { once: true, passive: true });
-    document.addEventListener('click', setupAudioInteraction, { once: true, passive: true });
-    
-    return () => {
-      document.removeEventListener('touchstart', setupAudioInteraction);
-      document.removeEventListener('click', setupAudioInteraction);
-    };
-  }, []);
+    // Clear any lingering audio issues
+    try {
+      stopAllSounds()
+    } catch (e) {
+      console.warn('Failed to stop sounds during reset:', e)
+    }
+  }
 
-  return (
-    <ThemeProvider>
-      <div className="app">
-        <CalculatorApp />
-      </div>
-    </ThemeProvider>
-  );
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary">
+          <div className="error-content">
+            <h2>Calculator Crashed</h2>
+            <p>Something went wrong. Don't worry, your data is safe!</p>
+            <button onClick={this.handleReset} className="reset-button">
+              Restart Calculator
+            </button>
+            <details style={{ marginTop: '1rem', fontSize: '0.8rem' }}>
+              <summary>Error Details</summary>
+              <pre>{this.state.error?.toString()}</pre>
+            </details>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
 }
 
-export default App;
+function App() {
+  const [isMobile, setIsMobile] = useState(false)
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    // Performance monitoring
+    let performanceWarnings = 0
+    const maxWarnings = 3
+    
+    const monitorPerformance = () => {
+      if (performance.memory) {
+        // Monitor memory usage
+        const memoryUsage = performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit
+        if (memoryUsage > 0.8) {
+          performanceWarnings++
+          console.warn('High memory usage detected:', Math.round(memoryUsage * 100) + '%')
+          
+          if (performanceWarnings >= maxWarnings) {
+            // Force cleanup
+            try {
+              stopAllSounds()
+              if (global.gc) {
+                global.gc()
+              }
+            } catch (e) {
+              console.warn('Cleanup failed:', e)
+            }
+            performanceWarnings = 0
+          }
+        }
+      }
+    }
+
+    // Check for mobile device
+    const mobile = isMobileDevice()
+    setIsMobile(mobile)
+    
+    try {
+      // Setup mobile optimizations
+      if (mobile) {
+        setupMobileViewport()
+        
+        // Check settings for address bar hiding
+        const settings = settingsManager.getSettings()
+        if (settings.hideAddressBarMobile && isAddressBarHidingSupported()) {
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            hideAddressBar()
+          }, 100)
+        }
+      }
+
+      // Monitor performance every 10 seconds
+      const performanceInterval = setInterval(monitorPerformance, 10000)
+      
+      // Setup viewport height updates for mobile
+      if (mobile) {
+        const updateVH = () => {
+          try {
+            const vh = window.innerHeight * 0.01
+            document.documentElement.style.setProperty('--vh', `${vh}px`)
+          } catch (e) {
+            console.warn('Failed to update viewport height:', e)
+          }
+        }
+        
+        updateVH()
+        window.addEventListener('resize', updateVH, { passive: true })
+        window.addEventListener('orientationchange', updateVH, { passive: true })
+        
+        // Also update VH after address bar changes
+        setTimeout(updateVH, 500)
+        
+        return () => {
+          clearInterval(performanceInterval)
+          window.removeEventListener('resize', updateVH)
+          window.removeEventListener('orientationchange', updateVH)
+        }
+      }
+      
+      return () => {
+        clearInterval(performanceInterval)
+      }
+      
+    } catch (error) {
+      console.error('App initialization error:', error)
+    } finally {
+      setIsReady(true)
+    }
+  }, [])
+
+  // Global error handler for unhandled errors
+  useEffect(() => {
+    const handleGlobalError = (event) => {
+      console.error('Global error:', event.error)
+      try {
+        stopAllSounds()
+      } catch (e) {
+        console.warn('Failed to stop sounds after global error:', e)
+      }
+    }
+
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason)
+      try {
+        stopAllSounds()
+      } catch (e) {
+        console.warn('Failed to stop sounds after promise rejection:', e)
+      }
+    }
+
+    window.addEventListener('error', handleGlobalError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
+
+  // Loading screen while app initializes
+  if (!isReady) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-content">
+          <div className="loading-spinner"></div>
+          <p>Loading Calculator...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <div className={`app ${isMobile ? 'mobile-device' : ''}`}>
+          <CalculatorApp />
+        </div>
+      </ThemeProvider>
+    </ErrorBoundary>
+  )
+}
+
+export default App

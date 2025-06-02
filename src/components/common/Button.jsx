@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef } from 'react'
 import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled, forceMobileAudioInit } from '../../utils/sounds'
 import './Button.css'
 
@@ -13,9 +13,12 @@ const Button = ({
   onTouchStart,
   onTouchEnd,
   enableSound = true,
+  debounceMs = 150,
   ...props 
 }) => {
   const soundDisabled = !isSoundEnabled() || !enableSound
+  const lastClickTime = useRef(0)
+  const isProcessing = useRef(false)
   
   const buttonClass = [
     'calc-button',
@@ -27,88 +30,143 @@ const Button = ({
   const handleClick = useCallback((e) => {
     if (disabled) return
     
-    // Force mobile audio init - INSTANT
-    forceMobileAudioInit()
+    // Prevent default to avoid double-firing on some devices
+    e.preventDefault()
+    e.stopPropagation()
     
-    // Handle user interaction for mobile/PWA audio - INSTANT
-    handleUserInteraction()
+    const now = Date.now()
     
-    // Resume audio context - INSTANT
-    resumeAudio()
-    
-    // Play click sound - INSTANT, no await
-    if (enableSound) {
-      playButtonClick()
+    // Debounce: prevent multiple rapid clicks
+    if (now - lastClickTime.current < debounceMs) {
+      return
     }
     
-    // Call the original onClick handler
-    if (onClick) {
-      onClick(e)
+    // Prevent re-entry during processing
+    if (isProcessing.current) {
+      return
     }
-  }, [onClick, disabled, enableSound])
+    
+    isProcessing.current = true
+    lastClickTime.current = now
+    
+    try {
+      // Force mobile audio init - INSTANT
+      forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
+      handleUserInteraction()
+      
+      // Resume audio context - INSTANT
+      resumeAudio()
+      
+      // Play click sound - INSTANT, no await
+      if (enableSound) {
+        playButtonClick()
+      }
+      
+      // Call the original onClick handler
+      if (onClick) {
+        onClick(e)
+      }
+    } catch (error) {
+      console.warn('Button click error:', error)
+    } finally {
+      // Release processing lock after a short delay
+      setTimeout(() => {
+        isProcessing.current = false
+      }, 50)
+    }
+  }, [onClick, disabled, enableSound, debounceMs])
 
   const handleMouseEnter = useCallback(() => {
-    if (disabled) return
+    if (disabled || isProcessing.current) return
     
-    // Force mobile audio init - INSTANT
-    forceMobileAudioInit()
-    
-    // Handle user interaction for mobile/PWA audio - INSTANT
-    handleUserInteraction()
-    
-    // Resume audio context - INSTANT  
-    resumeAudio()
-    
-    // Play subtle hover sound - INSTANT, no await
-    if (enableSound) {
-      playButtonHover()
+    try {
+      // Force mobile audio init - INSTANT
+      forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
+      handleUserInteraction()
+      
+      // Resume audio context - INSTANT  
+      resumeAudio()
+      
+      // Play subtle hover sound - INSTANT, no await
+      if (enableSound) {
+        playButtonHover()
+      }
+    } catch (error) {
+      // Silently ignore hover sound errors
     }
   }, [disabled, enableSound])
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    // Force mobile audio init - INSTANT
-    forceMobileAudioInit()
+    // Prevent default to avoid conflicts
+    e.preventDefault()
     
-    // Handle user interaction for mobile/PWA audio - INSTANT
-    handleUserInteraction()
-    
-    if (onMouseDown) {
-      onMouseDown(e)
+    try {
+      // Force mobile audio init - INSTANT
+      forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
+      handleUserInteraction()
+      
+      if (onMouseDown) {
+        onMouseDown(e)
+      }
+    } catch (error) {
+      console.warn('Mouse down error:', error)
     }
   }, [onMouseDown, disabled])
 
   const handleMouseUp = useCallback((e) => {
     if (disabled) return
     
-    if (onMouseUp) {
-      onMouseUp(e)
+    try {
+      if (onMouseUp) {
+        onMouseUp(e)
+      }
+    } catch (error) {
+      console.warn('Mouse up error:', error)
     }
   }, [onMouseUp, disabled])
 
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    // Force mobile audio init - INSTANT
-    forceMobileAudioInit()
+    // Prevent default to avoid conflicts with mouse events on mobile
+    e.preventDefault()
+    e.stopPropagation()
     
-    // Handle user interaction for mobile/PWA audio - INSTANT
-    handleUserInteraction()
-    
-    // Resume audio context - INSTANT
-    resumeAudio()
-    
-    if (onTouchStart) {
-      onTouchStart(e)
+    try {
+      // Force mobile audio init - INSTANT
+      forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
+      handleUserInteraction()
+      
+      // Resume audio context - INSTANT
+      resumeAudio()
+      
+      if (onTouchStart) {
+        onTouchStart(e)
+      }
+    } catch (error) {
+      console.warn('Touch start error:', error)
     }
   }, [onTouchStart, disabled])
 
   const handleTouchEnd = useCallback((e) => {
     if (disabled) return
     
-    if (onTouchEnd) {
-      onTouchEnd(e)
+    try {
+      if (onTouchEnd) {
+        onTouchEnd(e)
+      }
+    } catch (error) {
+      console.warn('Touch end error:', error)
     }
   }, [onTouchEnd, disabled])
 

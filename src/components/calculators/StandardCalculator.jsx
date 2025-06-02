@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Display from '../common/Display'
 import Button from '../common/Button'
 import { evaluate, formatNumber } from '../../utils/calculator'
@@ -12,75 +12,193 @@ const StandardCalculator = () => {
   const [waitingForOperand, setWaitingForOperand] = useState(false)
   const [expression, setExpression] = useState('')
   
+  // Add debouncing refs
+  const isProcessing = useRef(false)
+  const lastInputTime = useRef(0)
+  const inputQueue = useRef([])
+  const debounceTimeout = useRef(null)
+  
   const { addToHistory } = useCalculatorHistory()
 
-  const inputNumber = useCallback((num) => {
-    if (waitingForOperand || display === 'Error') {
-      setDisplay(String(num))
-      setWaitingForOperand(false)
-      setExpression(String(num))
-    } else {
-      const newDisplay = display === '0' ? String(num) : display + num
-      setDisplay(newDisplay)
-      setExpression(prev => prev + num)
+  // Debounced input processor
+  const processInputQueue = useCallback(() => {
+    if (inputQueue.current.length === 0 || isProcessing.current) return
+    
+    isProcessing.current = true
+    const input = inputQueue.current.shift()
+    
+    try {
+      input.action()
+    } catch (error) {
+      console.warn('Calculator input error:', error)
+      setDisplay('Error')
+    } finally {
+      isProcessing.current = false
+      
+      // Process next input if any
+      if (inputQueue.current.length > 0) {
+        setTimeout(processInputQueue, 50)
+      }
     }
-  }, [display, waitingForOperand])
-
-  const inputDecimal = useCallback(() => {
-    if (waitingForOperand || display === 'Error') {
-      setDisplay('0.')
-      setWaitingForOperand(false)
-      setExpression('0.')
-    } else if (display.indexOf('.') === -1) {
-      setDisplay(display + '.')
-      setExpression(prev => prev + '.')
-    }
-  }, [display, waitingForOperand])
-
-  const clear = useCallback(() => {
-    setDisplay('0')
-    setPreviousValue(null)
-    setOperation(null)
-    setWaitingForOperand(false)
-    setExpression('')
   }, [])
 
+  // Safe input wrapper
+  const safeInput = useCallback((action, priority = false) => {
+    const now = Date.now()
+    
+    // Rate limiting: prevent inputs faster than 50ms
+    if (now - lastInputTime.current < 50) {
+      return
+    }
+    
+    lastInputTime.current = now
+    
+    // Clear existing timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current)
+    }
+    
+    // Add to queue
+    if (priority) {
+      inputQueue.current.unshift({ action, timestamp: now })
+    } else {
+      inputQueue.current.push({ action, timestamp: now })
+    }
+    
+    // Limit queue size
+    if (inputQueue.current.length > 10) {
+      inputQueue.current.splice(5) // Keep only last 5 inputs
+    }
+    
+    // Debounce processing
+    debounceTimeout.current = setTimeout(processInputQueue, 30)
+  }, [processInputQueue])
+
+  const inputNumber = useCallback((num) => {
+    const action = () => {
+      if (waitingForOperand || display === 'Error') {
+        setDisplay(String(num))
+        setWaitingForOperand(false)
+        setExpression(String(num))
+      } else {
+        const newDisplay = display === '0' ? String(num) : display + num
+        // Limit display length to prevent overflow
+        if (newDisplay.length <= 15) {
+          setDisplay(newDisplay)
+          setExpression(prev => prev + num)
+        }
+      }
+    }
+    safeInput(action)
+  }, [display, waitingForOperand, safeInput])
+
+  const inputDecimal = useCallback(() => {
+    const action = () => {
+      if (waitingForOperand || display === 'Error') {
+        setDisplay('0.')
+        setWaitingForOperand(false)
+        setExpression('0.')
+      } else if (display.indexOf('.') === -1) {
+        setDisplay(display + '.')
+        setExpression(prev => prev + '.')
+      }
+    }
+    safeInput(action)
+  }, [display, waitingForOperand, safeInput])
+
+  const clear = useCallback(() => {
+    const action = () => {
+      setDisplay('0')
+      setPreviousValue(null)
+      setOperation(null)
+      setWaitingForOperand(false)
+      setExpression('')
+      
+      // Clear input queue on clear
+      inputQueue.current = []
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current)
+      }
+    }
+    safeInput(action, true) // Priority action
+  }, [safeInput])
+
   const performOperation = useCallback((nextOperation) => {
-    const inputValue = parseFloat(display)
-    
-    // Map display symbols to calculation operations
-    const operationMap = {
-      '÷': '/',
-      '×': '*', 
-      '−': '-',
-      '+': '+'
+    const action = () => {
+      const inputValue = parseFloat(display)
+      
+      if (isNaN(inputValue)) {
+        setDisplay('Error')
+        return
+      }
+      
+      // Map display symbols to calculation operations
+      const operationMap = {
+        '÷': '/',
+        '×': '*', 
+        '−': '-',
+        '+': '+'
+      }
+      
+      // Convert display symbol to calculation operation if needed
+      const calcOperation = operationMap[nextOperation] || nextOperation
+
+      if (previousValue === null) {
+        setPreviousValue(inputValue)
+        setExpression(display + ' ' + nextOperation + ' ')
+      } else if (operation) {
+        try {
+          const currentValue = previousValue || 0
+          const newValue = evaluate(currentValue, inputValue, operation)
+
+          if (isNaN(newValue) || !isFinite(newValue)) {
+            setDisplay('Error')
+            setPreviousValue(null)
+            setOperation(null)
+            setWaitingForOperand(true)
+            setExpression('')
+            return
+          }
+
+          setDisplay(formatNumber(newValue))
+          setPreviousValue(newValue)
+          setExpression(formatNumber(newValue) + ' ' + nextOperation + ' ')
+        } catch (error) {
+          setDisplay('Error')
+          setPreviousValue(null)
+          setOperation(null)
+          setWaitingForOperand(true)
+          setExpression('')
+          return
+        }
+      }
+
+      setWaitingForOperand(true)
+      setOperation(calcOperation) // Store the actual operation for calculation
     }
-    
-    // Convert display symbol to calculation operation if needed
-    const calcOperation = operationMap[nextOperation] || nextOperation
-
-    if (previousValue === null) {
-      setPreviousValue(inputValue)
-      setExpression(display + ' ' + nextOperation + ' ')
-    } else if (operation) {
-      const currentValue = previousValue || 0
-      const newValue = evaluate(currentValue, inputValue, operation)
-
-      setDisplay(formatNumber(newValue))
-      setPreviousValue(newValue)
-      setExpression(formatNumber(newValue) + ' ' + nextOperation + ' ')
-    }
-
-    setWaitingForOperand(true)
-    setOperation(calcOperation) // Store the actual operation for calculation
-  }, [display, previousValue, operation])
+    safeInput(action)
+  }, [display, previousValue, operation, safeInput])
 
   const calculate = useCallback(() => {
-    const inputValue = parseFloat(display)
+    const action = () => {
+      const inputValue = parseFloat(display)
 
-    if (previousValue !== null && operation) {
+      if (isNaN(inputValue) || previousValue === null || !operation) {
+        return
+      }
+
       try {
         const newValue = evaluate(previousValue, inputValue, operation)
+        
+        if (isNaN(newValue) || !isFinite(newValue)) {
+          setDisplay('Error')
+          setPreviousValue(null)
+          setOperation(null)
+          setWaitingForOperand(true)
+          setExpression('')
+          return
+        }
+        
         const result = formatNumber(newValue)
         const fullExpression = expression + display
         
@@ -93,6 +211,7 @@ const StandardCalculator = () => {
         setWaitingForOperand(true)
         setExpression('')
       } catch (error) {
+        console.warn('Calculation error:', error)
         setDisplay('Error')
         setPreviousValue(null)
         setOperation(null)
@@ -100,34 +219,56 @@ const StandardCalculator = () => {
         setExpression('')
       }
     }
-  }, [display, previousValue, operation, expression, addToHistory])
+    safeInput(action, true) // Priority action
+  }, [display, previousValue, operation, expression, addToHistory, safeInput])
 
   const handleBackspace = useCallback(() => {
-    if (!waitingForOperand && display !== 'Error') {
-      if (display.length > 1) {
-        setDisplay(display.slice(0, -1))
-      } else {
-        setDisplay('0')
+    const action = () => {
+      if (!waitingForOperand && display !== 'Error') {
+        if (display.length > 1) {
+          setDisplay(display.slice(0, -1))
+        } else {
+          setDisplay('0')
+        }
       }
     }
-  }, [display, waitingForOperand])
+    safeInput(action)
+  }, [display, waitingForOperand, safeInput])
 
   const toggleSign = useCallback(() => {
-    if (display !== '0' && display !== 'Error') {
-      setDisplay(display.startsWith('-') ? display.slice(1) : '-' + display)
-    }
-  }, [display])
-
-  const percentage = useCallback(() => {
-    if (display !== 'Error') {
-      const value = parseFloat(display)
-      if (!isNaN(value)) {
-        setDisplay(formatNumber(value / 100))
+    const action = () => {
+      if (display !== '0' && display !== 'Error') {
+        setDisplay(display.startsWith('-') ? display.slice(1) : '-' + display)
       }
     }
-  }, [display])
+    safeInput(action)
+  }, [display, safeInput])
 
-  // Keyboard support
+  const percentage = useCallback(() => {
+    const action = () => {
+      if (display !== 'Error') {
+        const value = parseFloat(display)
+        if (!isNaN(value) && isFinite(value)) {
+          setDisplay(formatNumber(value / 100))
+        } else {
+          setDisplay('Error')
+        }
+      }
+    }
+    safeInput(action)
+  }, [display, safeInput])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current)
+      }
+      inputQueue.current = []
+    }
+  }, [])
+
+  // Keyboard support with debouncing
   useEffect(() => {
     const handleKeyDown = (event) => {
       const { key } = event
@@ -175,33 +316,33 @@ const StandardCalculator = () => {
       
       <div className="button-grid">
         {/* Row 1: AC, ±, %, / */}
-        <Button onClick={clear} variant="secondary">AC</Button>
-        <Button onClick={toggleSign} variant="secondary">±</Button>
-        <Button onClick={percentage} variant="secondary">%</Button>
-        <Button onClick={() => performOperation('/')} variant="operator">÷</Button>
+        <Button onClick={clear} variant="secondary" debounceMs={100}>AC</Button>
+        <Button onClick={toggleSign} variant="secondary" debounceMs={100}>±</Button>
+        <Button onClick={percentage} variant="secondary" debounceMs={100}>%</Button>
+        <Button onClick={() => performOperation('/')} variant="operator" debounceMs={100}>÷</Button>
         
         {/* Row 2: 7, 8, 9, * */}
-        <Button onClick={() => inputNumber('7')}>7</Button>
-        <Button onClick={() => inputNumber('8')}>8</Button>
-        <Button onClick={() => inputNumber('9')}>9</Button>
-        <Button onClick={() => performOperation('*')} variant="operator">×</Button>
+        <Button onClick={() => inputNumber('7')} debounceMs={100}>7</Button>
+        <Button onClick={() => inputNumber('8')} debounceMs={100}>8</Button>
+        <Button onClick={() => inputNumber('9')} debounceMs={100}>9</Button>
+        <Button onClick={() => performOperation('*')} variant="operator" debounceMs={100}>×</Button>
         
         {/* Row 3: 4, 5, 6, - */}
-        <Button onClick={() => inputNumber('4')}>4</Button>
-        <Button onClick={() => inputNumber('5')}>5</Button>
-        <Button onClick={() => inputNumber('6')}>6</Button>
-        <Button onClick={() => performOperation('-')} variant="operator">−</Button>
+        <Button onClick={() => inputNumber('4')} debounceMs={100}>4</Button>
+        <Button onClick={() => inputNumber('5')} debounceMs={100}>5</Button>
+        <Button onClick={() => inputNumber('6')} debounceMs={100}>6</Button>
+        <Button onClick={() => performOperation('-')} variant="operator" debounceMs={100}>−</Button>
         
         {/* Row 4: 1, 2, 3, + */}
-        <Button onClick={() => inputNumber('1')}>1</Button>
-        <Button onClick={() => inputNumber('2')}>2</Button>
-        <Button onClick={() => inputNumber('3')}>3</Button>
-        <Button onClick={() => performOperation('+')} variant="operator">+</Button>
+        <Button onClick={() => inputNumber('1')} debounceMs={100}>1</Button>
+        <Button onClick={() => inputNumber('2')} debounceMs={100}>2</Button>
+        <Button onClick={() => inputNumber('3')} debounceMs={100}>3</Button>
+        <Button onClick={() => performOperation('+')} variant="operator" debounceMs={100}>+</Button>
         
-        {/* Row 5: 0 (spans 2 columns), ., = */}
-        <Button onClick={() => inputNumber('0')} className="span-2">0</Button>
-        <Button onClick={inputDecimal}>.</Button>
-        <Button onClick={calculate} variant="operator">=</Button>
+        {/* Row 5: 0, ., = */}
+        <Button onClick={() => inputNumber('0')} className="span-2" debounceMs={100}>0</Button>
+        <Button onClick={inputDecimal} debounceMs={100}>.</Button>
+        <Button onClick={calculate} variant="operator" debounceMs={100}>=</Button>
       </div>
     </div>
   )
