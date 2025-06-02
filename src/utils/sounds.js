@@ -1,4 +1,4 @@
-// Simple sound utility
+// Ultra-aggressive sound system for mobile
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -9,6 +9,8 @@ class SoundManager {
     this.hasUserInteracted = false
     this.isMobile = isMobileDevice()
     this.audioElements = new Map()
+    this.currentIndex = 0
+    this.lastPlayTime = 0
     
     // Initialize immediately
     this.init()
@@ -23,7 +25,7 @@ class SoundManager {
       return
     }
 
-    // Create basic audio elements
+    // Create multiple audio elements
     this.createAudio()
     this.setupInteractionListeners()
     
@@ -31,10 +33,10 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create a single, very short click sound
+    // Create an extremely short click sound
     const createClickSound = () => {
       const rate = 8000
-      const duration = 0.05 // Super short
+      const duration = 0.03 // Ultra short
       const samples = Math.floor(duration * rate)
       const buffer = new ArrayBuffer(44 + samples * 2)
       const view = new DataView(buffer)
@@ -54,11 +56,11 @@ class SoundManager {
       view.setUint32(36, 0x61746164, false) // 'data'
       view.setUint32(40, samples * 2, true)
       
-      // Simple click sound
+      // Sharp click sound
       for (let i = 0; i < samples; i++) {
         const t = i / rate
-        const amp = Math.exp(-t * 30) * 0.5 // Faster decay, louder
-        const sample = Math.sin(2 * Math.PI * 1000 * t) * amp
+        const amp = Math.exp(-t * 50) * 0.8 // Even faster decay, louder
+        const sample = Math.sin(2 * Math.PI * 1200 * t) * amp
         view.setInt16(44 + i * 2, sample * 32767, true)
       }
       
@@ -68,8 +70,8 @@ class SoundManager {
     // Create multiple audio elements for the same sound
     const dataURL = createClickSound()
     
-    // Create 3 audio elements for rapid clicking
-    for (let i = 0; i < 3; i++) {
+    // Create 5 audio elements for rapid clicking
+    for (let i = 0; i < 5; i++) {
       const audio = new Audio()
       audio.src = dataURL
       audio.volume = 1.0 // Maximum volume
@@ -119,37 +121,37 @@ class SoundManager {
   playSound() {
     if (!this.isEnabled || !this.initialized) return
     
-    let played = false
+    const now = Date.now()
+    if (now - this.lastPlayTime < 20) return // Prevent too rapid playback
+    this.lastPlayTime = now
     
-    // Try each audio element until one plays
-    for (let i = 0; i < 3; i++) {
-      if (played) break
+    // Get next audio element
+    const audio = this.audioElements.get(`click${this.currentIndex}`)
+    this.currentIndex = (this.currentIndex + 1) % 5
+    
+    if (!audio) return
+    
+    try {
+      // Stop any current playback
+      audio.pause()
+      audio.currentTime = 0
       
-      const audio = this.audioElements.get(`click${i}`)
-      if (!audio) continue
-      
-      try {
-        // Stop any current playback
-        audio.pause()
-        audio.currentTime = 0
-        
-        // Play immediately
-        const playPromise = audio.play()
-        if (playPromise) {
-          playPromise.then(() => {
-            played = true
-          }).catch(() => {
-            // Try next audio element
-          })
-        }
-      } catch (e) {
-        // Try next audio element
+      // Play immediately
+      const playPromise = audio.play()
+      if (playPromise) {
+        playPromise.catch(() => {
+          // If this fails, try the next one immediately
+          this.playSound()
+        })
       }
+    } catch (e) {
+      // If this fails, try the next one immediately
+      this.playSound()
     }
     
-    // Fallback to vibration
+    // Always vibrate on mobile
     if (this.isMobile && navigator.vibrate) {
-      navigator.vibrate(10)
+      navigator.vibrate(5) // Shorter vibration
     }
   }
 
@@ -158,8 +160,10 @@ class SoundManager {
     settingsManager.updateSettings({ soundEnabled: enabled })
     
     if (enabled) {
-      // Test sound
-      setTimeout(() => this.playSound(), 100)
+      // Test sound multiple times
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => this.playSound(), i * 100)
+      }
     }
   }
 
@@ -182,6 +186,8 @@ class SoundManager {
   handleUserInteraction() {
     if (!this.hasUserInteracted) {
       this.hasUserInteracted = true
+      // Force test sound
+      this.playSound()
     }
   }
 }
