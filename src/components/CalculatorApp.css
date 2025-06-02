@@ -321,7 +321,8 @@
     display: flex;
     align-items: stretch;
     min-height: 0; /* Allow content to shrink */
-    overflow: hidden;
+    overflow-y: auto; /* Allow vertical scrolling when content overflows */
+    overflow-x: hidden;
   }
   
   .calculator-wrapper {
