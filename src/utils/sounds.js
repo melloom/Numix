@@ -1,4 +1,4 @@
-// Mobile-optimized sound system for PWA - ensures sound works on mobile
+// Safe mobile sound system - no auto-play, crash-resistant
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -14,288 +14,352 @@ class SoundManager {
     this.isUnlocking = false
     this.clickCount = 0
     this.isAudioUnlocked = false
+    this.initializationComplete = false
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
     
-    // Initialize immediately
-    this.init()
+    // Initialize safely
+    this.safeInit()
   }
 
-  init() {
-    const settings = settingsManager.getSettings()
-    this.isEnabled = settings.soundEnabled
-    
-    if (!this.isEnabled) {
-      this.initialized = true
-      return
-    }
+  safeInit() {
+    try {
+      const settings = settingsManager.getSettings()
+      this.isEnabled = settings.soundEnabled
+      
+      if (!this.isEnabled) {
+        this.initialized = true
+        this.initializationComplete = true
+        return
+      }
 
-    // Create audio elements
-    this.createAudio()
-    this.setupInteractionListeners()
-    
-    this.initialized = true
+      // Create audio elements safely
+      this.createAudio()
+      this.setupInteractionListeners()
+      
+      this.initialized = true
+      this.initializationComplete = true
+    } catch (error) {
+      console.warn('Sound initialization failed safely:', error)
+      this.initialized = false
+      this.initializationComplete = true
+      this.isEnabled = false
+    }
   }
 
   createAudio() {
-    // Create more audio elements for mobile reliability
-    const audioCount = this.isMobile ? 15 : 10
-    
-    for (let i = 0; i < audioCount; i++) {
-      const audio = new Audio()
-      audio.src = this.soundFile
-      audio.volume = 0.8
-      audio.preload = 'auto'
-      audio.muted = false
-      
-      // Mobile-specific audio settings
-      if (this.isMobile) {
-        audio.playsInline = true
-        audio.controls = false
-        audio.autoplay = false
-      }
-      
-      // Add error handling
-      audio.addEventListener('error', (e) => {
-        console.warn(`Audio ${i} error:`, e)
-        setTimeout(() => this.recreateAudioElement(i), 100)
-      })
-      
-      // Add loaded event
-      audio.addEventListener('canplaythrough', () => {
-        console.log(`Audio ${i} ready`)
-      })
-      
-      // Reset audio when it ends
-      audio.addEventListener('ended', () => {
-        audio.currentTime = 0
-      })
-      
-      // Load the audio
-      audio.load()
-      
-      this.audioElements.push(audio)
-    }
-
-    // Create Web Audio context for better control
     try {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)()
-      console.log('Audio context created:', this.audioContext.state)
-    } catch (e) {
-      console.warn('Web Audio API not supported')
+      // Create audio elements but don't auto-play anything
+      const audioCount = this.isMobile ? 10 : 8 // Reduced count for stability
+      
+      for (let i = 0; i < audioCount; i++) {
+        try {
+          const audio = new Audio()
+          audio.src = this.soundFile
+          audio.volume = 0.8
+          audio.preload = 'none' // Changed to 'none' to prevent auto-loading
+          audio.muted = true // Start muted to prevent accidental playback
+          
+          // Mobile-specific audio settings
+          if (this.isMobile) {
+            audio.playsInline = true
+            audio.controls = false
+            audio.autoplay = false
+          }
+          
+          // Add error handling that won't crash
+          audio.addEventListener('error', (e) => {
+            console.warn(`Audio ${i} error (non-critical):`, e.message)
+            // Don't recreate on error during init to prevent loops
+          })
+          
+          // Reset audio when it ends
+          audio.addEventListener('ended', () => {
+            try {
+              audio.currentTime = 0
+            } catch (e) {
+              console.warn('Audio reset error (ignored):', e)
+            }
+          })
+          
+          this.audioElements.push(audio)
+        } catch (error) {
+          console.warn(`Failed to create audio element ${i} (continuing):`, error)
+          // Continue with other audio elements even if one fails
+        }
+      }
+
+      // Create Web Audio context safely
+      try {
+        if (window.AudioContext || window.webkitAudioContext) {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        }
+      } catch (e) {
+        console.warn('Web Audio API not available (continuing without it)')
+      }
+    } catch (error) {
+      console.warn('Audio creation failed (continuing without audio):', error)
+      this.audioElements = []
     }
   }
 
   recreateAudioElement(index) {
-    if (index >= 0 && index < this.audioElements.length) {
-      const audio = new Audio()
-      audio.src = this.soundFile
-      audio.volume = 0.8
-      audio.preload = 'auto'
-      audio.muted = false
-      
-      if (this.isMobile) {
-        audio.playsInline = true
-        audio.controls = false
-        audio.autoplay = false
+    try {
+      if (index >= 0 && index < this.audioElements.length) {
+        const audio = new Audio()
+        audio.src = this.soundFile
+        audio.volume = 0.8
+        audio.preload = 'none'
+        audio.muted = true
+        
+        if (this.isMobile) {
+          audio.playsInline = true
+          audio.controls = false
+          audio.autoplay = false
+        }
+        
+        audio.addEventListener('error', (e) => {
+          console.warn(`Recreated audio ${index} error (ignored):`, e)
+        })
+        
+        audio.addEventListener('ended', () => {
+          try {
+            audio.currentTime = 0
+          } catch (e) {
+            // Ignore reset errors
+          }
+        })
+        
+        this.audioElements[index] = audio
       }
-      
-      audio.addEventListener('error', (e) => {
-        console.warn(`Recreated audio ${index} error:`, e)
-        setTimeout(() => this.recreateAudioElement(index), 100)
-      })
-      
-      audio.addEventListener('ended', () => {
-        audio.currentTime = 0
-      })
-      
-      audio.load()
-      this.audioElements[index] = audio
+    } catch (error) {
+      console.warn(`Failed to recreate audio ${index} (ignored):`, error)
     }
   }
 
   setupInteractionListeners() {
-    const events = ['touchstart', 'touchend', 'click', 'mousedown', 'pointerdown']
-    
-    const unlock = async () => {
-      if (this.hasUserInteracted || this.isUnlocking) return
-      this.hasUserInteracted = true
-      this.isUnlocking = true
+    try {
+      const events = ['touchstart', 'click', 'mousedown']
       
-      console.log('Unlocking audio on mobile...')
-      
-      // Resume audio context if available
-      if (this.audioContext && this.audioContext.state === 'suspended') {
+      const unlock = async () => {
         try {
-          await this.audioContext.resume()
-          console.log('Audio context resumed:', this.audioContext.state)
-        } catch (e) {
-          console.warn('Failed to resume audio context:', e)
+          if (this.hasUserInteracted || this.isUnlocking) return
+          this.hasUserInteracted = true
+          this.isUnlocking = true
+          
+          // Resume audio context safely
+          if (this.audioContext && this.audioContext.state === 'suspended') {
+            try {
+              await this.audioContext.resume()
+            } catch (e) {
+              console.warn('Audio context resume failed (ignored):', e)
+            }
+          }
+          
+          // Silent unlock - no actual sound playback during unlock
+          const unlockPromises = this.audioElements.map(async (audio, index) => {
+            try {
+              // Prepare audio for future use without playing sound
+              audio.muted = true
+              audio.volume = 0
+              audio.preload = 'auto' // Now safe to preload after user interaction
+              
+              // Try silent play/pause to unlock (no sound will be heard)
+              const playPromise = audio.play()
+              if (playPromise) {
+                await playPromise
+                audio.pause()
+                audio.currentTime = 0
+              }
+              
+              // Prepare for real use
+              audio.muted = false
+              audio.volume = 0.8
+            } catch (e) {
+              // Ignore unlock failures for individual elements
+              console.warn(`Audio ${index} unlock failed (ignored):`, e)
+            }
+          })
+          
+          await Promise.allSettled(unlockPromises)
+          this.isAudioUnlocked = true
+          
+          // Set unlocking to false after delay
+          setTimeout(() => {
+            this.isUnlocking = false
+          }, 200)
+          
+          // Remove listeners
+          events.forEach(eventType => {
+            document.removeEventListener(eventType, unlock, true)
+          })
+        } catch (error) {
+          console.warn('Audio unlock process failed (ignored):', error)
+          this.isUnlocking = false
         }
       }
       
-      // Aggressive audio unlocking - try to play all audio elements
-      const unlockPromises = this.audioElements.map(async (audio, index) => {
+      // Add listeners safely
+      events.forEach(eventType => {
         try {
-          audio.muted = true
-          audio.volume = 0
-          await audio.play()
-          audio.pause()
-          audio.currentTime = 0
-          audio.muted = false
-          audio.volume = 0.8
-          console.log(`Audio ${index} unlocked`)
+          document.addEventListener(eventType, unlock, { 
+            once: false, 
+            passive: true, 
+            capture: true 
+          })
         } catch (e) {
-          console.warn(`Failed to unlock audio ${index}:`, e)
+          console.warn(`Failed to add ${eventType} listener (ignored):`, e)
         }
       })
-      
-      await Promise.allSettled(unlockPromises)
-      
-      this.isAudioUnlocked = true
-      console.log('All audio elements processed for unlock')
-      
-      // Set unlocking to false after a short delay
-      setTimeout(() => {
-        this.isUnlocking = false
-      }, 200)
-      
-      // Remove listeners
-      events.forEach(eventType => {
-        document.removeEventListener(eventType, unlock, true)
-      })
+    } catch (error) {
+      console.warn('Failed to setup interaction listeners (ignored):', error)
     }
-    
-    // Add listeners
-    events.forEach(eventType => {
-      document.addEventListener(eventType, unlock, { 
-        once: false, 
-        passive: true, 
-        capture: true 
-      })
-    })
   }
 
   playSound() {
-    if (!this.isEnabled || !this.initialized || this.isUnlocking) return
-    
-    this.clickCount++
-    
-    // Force audio context resume on every play for mobile
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume()
+    // Only play if fully initialized and user has interacted
+    if (!this.isEnabled || !this.initialized || !this.initializationComplete || this.isUnlocking) {
+      return
     }
     
-    // Reset all audio elements every 15 clicks for mobile
-    const resetInterval = this.isMobile ? 15 : 20
-    if (this.clickCount % resetInterval === 0) {
-      this.resetAllAudio()
+    // Don't play if no user interaction yet
+    if (!this.hasUserInteracted) {
+      return
     }
     
-    // Try multiple audio elements aggressively
-    let attempts = 0
-    let played = false
-    const maxAttempts = this.isMobile ? 5 : 3
-    
-    while (!played && attempts < maxAttempts) {
-      const audio = this.audioElements[this.currentIndex]
-      this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+    try {
+      this.clickCount++
       
-      if (audio) {
+      // Force audio context resume safely
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(e => {
+          console.warn('Audio context resume failed (ignored):', e)
+        })
+      }
+      
+      // Reset periodically but safely
+      const resetInterval = this.isMobile ? 15 : 20
+      if (this.clickCount % resetInterval === 0) {
+        this.resetAllAudio()
+      }
+      
+      // Try to play sound with multiple fallbacks
+      let attempts = 0
+      let played = false
+      const maxAttempts = 3 // Reduced for stability
+      
+      while (!played && attempts < maxAttempts && this.audioElements.length > 0) {
         try {
-          // For mobile, be more aggressive
-          if (this.isMobile) {
-            audio.muted = false
-            audio.volume = 0.8
-          }
+          const audio = this.audioElements[this.currentIndex]
+          this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
           
-          // Stop and reset current audio
-          audio.pause()
-          audio.currentTime = 0
-          
-          // Play immediately with promise handling
-          const playPromise = audio.play()
-          if (playPromise) {
-            playPromise.then(() => {
+          if (audio) {
+            // Ensure audio is ready
+            if (this.isMobile) {
+              audio.muted = false
+              audio.volume = 0.8
+            }
+            
+            // Stop and reset safely
+            try {
+              audio.pause()
+              audio.currentTime = 0
+            } catch (e) {
+              // Ignore reset errors
+            }
+            
+            // Play with promise handling
+            const playPromise = audio.play()
+            if (playPromise) {
+              playPromise.then(() => {
+                played = true
+              }).catch((e) => {
+                console.warn(`Audio play failed, trying next (${attempts + 1}/${maxAttempts}):`, e)
+                attempts++
+              })
+            } else {
               played = true
-              console.log(`Sound played successfully with audio ${this.currentIndex - 1}`)
-            }).catch((e) => {
-              console.warn(`Audio ${this.currentIndex - 1} play failed:`, e)
-              attempts++
-            })
+            }
           } else {
-            played = true
+            attempts++
           }
         } catch (e) {
-          console.warn(`Audio ${this.currentIndex - 1} error:`, e)
+          console.warn(`Audio play attempt ${attempts + 1} failed:`, e)
           attempts++
         }
-      } else {
-        attempts++
       }
-    }
-    
-    // If all attempts failed, recreate audio elements
-    if (!played) {
-      console.warn('All audio play attempts failed, recreating elements')
-      setTimeout(() => this.recreateAllAudio(), 50)
-    }
-    
-    // Always vibrate on mobile as feedback
-    if (this.isMobile && navigator.vibrate) {
-      try {
-        navigator.vibrate([8])
-      } catch (e) {
-        console.warn('Vibration failed:', e)
+      
+      // Vibration feedback (safe fallback)
+      if (this.isMobile && navigator.vibrate) {
+        try {
+          navigator.vibrate([8])
+        } catch (e) {
+          // Ignore vibration errors
+        }
       }
+    } catch (error) {
+      console.warn('Sound playback failed (ignored):', error)
     }
   }
 
   resetAllAudio() {
-    console.log('Resetting all audio elements')
-    this.audioElements.forEach((audio, index) => {
-      try {
-        audio.pause()
-        audio.currentTime = 0
-        if (this.isMobile) {
-          audio.muted = false
-          audio.volume = 0.8
+    try {
+      this.audioElements.forEach((audio, index) => {
+        try {
+          audio.pause()
+          audio.currentTime = 0
+          if (this.isMobile) {
+            audio.muted = false
+            audio.volume = 0.8
+          }
+        } catch (e) {
+          console.warn(`Failed to reset audio ${index} (ignored):`, e)
         }
-        audio.load()
-      } catch (e) {
-        console.warn(`Failed to reset audio ${index}:`, e)
-      }
-    })
+      })
+    } catch (error) {
+      console.warn('Failed to reset all audio (ignored):', error)
+    }
   }
 
   recreateAllAudio() {
-    console.log('Recreating all audio elements')
-    // Recreate all audio elements if they get stuck
-    for (let i = 0; i < this.audioElements.length; i++) {
-      this.recreateAudioElement(i)
+    try {
+      // Only recreate if user has interacted
+      if (!this.hasUserInteracted) return
+      
+      for (let i = 0; i < this.audioElements.length; i++) {
+        this.recreateAudioElement(i)
+      }
+    } catch (error) {
+      console.warn('Failed to recreate all audio (ignored):', error)
     }
   }
 
   setEnabled(enabled) {
-    this.isEnabled = enabled
-    settingsManager.updateSettings({ soundEnabled: enabled })
-    
-    if (enabled) {
-      // Resume audio context if suspended
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        this.audioContext.resume()
-      }
+    try {
+      this.isEnabled = enabled
+      settingsManager.updateSettings({ soundEnabled: enabled })
       
-      // Test sound only if not unlocking
-      if (!this.isUnlocking) {
-        setTimeout(() => this.playSound(), 200)
+      if (enabled && this.hasUserInteracted) {
+        // Resume audio context safely
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(e => {
+            console.warn('Audio context resume failed (ignored):', e)
+          })
+        }
+        
+        // Test sound only if user has already interacted and not unlocking
+        if (!this.isUnlocking) {
+          setTimeout(() => this.playSound(), 300)
+        }
       }
+    } catch (error) {
+      console.warn('Failed to set sound enabled (ignored):', error)
     }
   }
 
   isAudioEnabled() {
-    return this.isEnabled
+    return this.isEnabled && this.initializationComplete
   }
 
   playClick() {
@@ -312,49 +376,123 @@ class SoundManager {
 
   handleUserInteraction() {
     if (!this.hasUserInteracted && !this.isUnlocking) {
-      console.log('Manual user interaction triggered')
-      this.hasUserInteracted = true
-      this.isUnlocking = true
-      
-      // Resume audio context if suspended
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        this.audioContext.resume()
-      }
-      
-      // Force unlock a test audio
-      if (this.audioElements.length > 0) {
-        const testAudio = this.audioElements[0]
-        testAudio.muted = true
-        testAudio.play().then(() => {
-          testAudio.pause()
-          testAudio.currentTime = 0
-          testAudio.muted = false
-          console.log('Manual audio unlock successful')
-        }).catch(e => {
-          console.warn('Manual audio unlock failed:', e)
-        })
-      }
-      
-      // Set unlocking to false after a short delay
-      setTimeout(() => {
+      try {
+        this.hasUserInteracted = true
+        this.isUnlocking = true
+        
+        // Resume audio context safely
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(e => {
+            console.warn('Manual audio context resume failed (ignored):', e)
+          })
+        }
+        
+        // Force unlock one test audio without playing sound
+        if (this.audioElements.length > 0) {
+          const testAudio = this.audioElements[0]
+          testAudio.muted = true
+          testAudio.play().then(() => {
+            testAudio.pause()
+            testAudio.currentTime = 0
+            testAudio.muted = false
+          }).catch(e => {
+            console.warn('Manual audio unlock failed (ignored):', e)
+          })
+        }
+        
+        setTimeout(() => {
+          this.isUnlocking = false
+        }, 200)
+      } catch (error) {
+        console.warn('Manual user interaction failed (ignored):', error)
         this.isUnlocking = false
-      }, 200)
+      }
     }
   }
 }
 
-// Create singleton
-const soundManager = new SoundManager()
+// Create singleton safely
+let soundManager
+try {
+  soundManager = new SoundManager()
+} catch (error) {
+  console.warn('SoundManager creation failed, creating fallback:', error)
+  soundManager = {
+    playClick: () => {},
+    playSuccess: () => {},
+    playError: () => {},
+    setEnabled: () => {},
+    isAudioEnabled: () => false,
+    handleUserInteraction: () => {}
+  }
+}
 
-// Export functions
-export const playButtonClick = () => soundManager.playClick()
+// Export functions with fallbacks
+export const playButtonClick = () => {
+  try {
+    soundManager.playClick()
+  } catch (e) {
+    console.warn('playButtonClick failed (ignored):', e)
+  }
+}
+
 export const playButtonHover = () => {} // Disabled for speed
-export const playSuccess = () => soundManager.playSuccess()
-export const playError = () => soundManager.playError()
-export const setSoundEnabled = (enabled) => soundManager.setEnabled(enabled)
-export const isSoundEnabled = () => soundManager.isAudioEnabled()
-export const handleUserInteraction = () => soundManager.handleUserInteraction()
-export const resumeAudio = () => soundManager.handleUserInteraction()
-export const forceMobileAudioInit = () => soundManager.handleUserInteraction()
+
+export const playSuccess = () => {
+  try {
+    soundManager.playSuccess()
+  } catch (e) {
+    console.warn('playSuccess failed (ignored):', e)
+  }
+}
+
+export const playError = () => {
+  try {
+    soundManager.playError()
+  } catch (e) {
+    console.warn('playError failed (ignored):', e)
+  }
+}
+
+export const setSoundEnabled = (enabled) => {
+  try {
+    soundManager.setEnabled(enabled)
+  } catch (e) {
+    console.warn('setSoundEnabled failed (ignored):', e)
+  }
+}
+
+export const isSoundEnabled = () => {
+  try {
+    return soundManager.isAudioEnabled()
+  } catch (e) {
+    console.warn('isSoundEnabled failed (ignored):', e)
+    return false
+  }
+}
+
+export const handleUserInteraction = () => {
+  try {
+    soundManager.handleUserInteraction()
+  } catch (e) {
+    console.warn('handleUserInteraction failed (ignored):', e)
+  }
+}
+
+export const resumeAudio = () => {
+  try {
+    soundManager.handleUserInteraction()
+  } catch (e) {
+    console.warn('resumeAudio failed (ignored):', e)
+  }
+}
+
+export const forceMobileAudioInit = () => {
+  try {
+    soundManager.handleUserInteraction()
+  } catch (e) {
+    console.warn('forceMobileAudioInit failed (ignored):', e)
+  }
+}
 
 export default soundManager 
