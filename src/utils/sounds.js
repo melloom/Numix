@@ -13,6 +13,8 @@ class SoundManager {
     this.fallbackAudio = new Map()
     this.isMobile = isMobileDevice()
     this.isPWA = this.checkIfPWA()
+    this.soundsLoaded = false
+    this.mobileAudioForceEnabled = false
     
     // Bind methods for event listeners
     this.handleUserInteraction = this.handleUserInteraction.bind(this)
@@ -28,11 +30,13 @@ class SoundManager {
     // Load sound settings first
     const settings = settingsManager.getSettings()
     this.isEnabled = settings.soundEnabled
+    this.mobileAudioForceEnabled = settings.mobileAudioEnabled
     
     console.log('Sound Manager: Initializing...', { 
       isMobile: this.isMobile, 
       isPWA: this.isPWA, 
-      enabled: this.isEnabled 
+      enabled: this.isEnabled,
+      mobileAudioEnabled: this.mobileAudioForceEnabled
     })
 
     if (!this.isEnabled) {
@@ -52,16 +56,9 @@ class SoundManager {
       // Set up user interaction listeners for mobile/PWA
       this.setupUserInteractionListeners()
       
-      // Initialize immediately if context is running, otherwise wait for interaction
-      if (this.audioContext.state === 'running') {
-        await this.loadSounds()
-        this.hasUserInteracted = true
-        this.initialized = true
-      } else {
-        // Pre-create fallback audio elements for immediate use
-        this.createFallbackAudio()
-        this.initialized = true
-      }
+      // Pre-create fallback audio elements for immediate use
+      this.createFallbackAudio()
+      this.initialized = true
       
     } catch (error) {
       console.warn('Sound Manager: AudioContext initialization failed, using fallback:', error)
@@ -76,18 +73,23 @@ class SoundManager {
     const handleFirstInteraction = async () => {
       if (this.hasUserInteracted) return
       
-      console.log('Sound Manager: First user interaction detected')
+      console.log('Sound Manager: First user interaction detected - initializing audio')
       this.hasUserInteracted = true
       
       try {
-        if (this.audioContext && this.audioContext.state !== 'running') {
-          await this.audioContext.resume()
-          console.log('Sound Manager: AudioContext resumed')
-        }
-        
-        if (!this.sounds.buttonClick) {
-          await this.loadSounds()
-          console.log('Sound Manager: Sounds loaded after user interaction')
+        if (this.audioContext) {
+          // Resume audio context on mobile
+          if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume()
+            console.log('Sound Manager: AudioContext resumed after user interaction')
+          }
+          
+          // Load sounds after user interaction
+          if (!this.soundsLoaded) {
+            await this.loadSounds()
+            this.soundsLoaded = true
+            console.log('Sound Manager: Sounds loaded after user interaction')
+          }
         }
         
         // Remove listeners after first interaction
@@ -110,6 +112,50 @@ class SoundManager {
     })
   }
 
+  // Force mobile audio initialization - called from settings
+  async forceMobileAudioInit() {
+    if (!this.isMobile) return true
+
+    console.log('Sound Manager: Force initializing mobile audio...')
+    
+    try {
+      // Create or resume audio context
+      if (!this.audioContext) {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+          latencyHint: 'interactive',
+          sampleRate: 22050
+        })
+      }
+
+      // Force resume the audio context
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume()
+        console.log('Sound Manager: AudioContext force resumed')
+      }
+
+      // Load sounds immediately
+      if (!this.soundsLoaded) {
+        await this.loadSounds()
+        this.soundsLoaded = true
+        console.log('Sound Manager: Sounds force loaded')
+      }
+
+      // Mark as user interacted
+      this.hasUserInteracted = true
+
+      // Play a test sound to confirm it works
+      await new Promise(resolve => setTimeout(resolve, 100))
+      await this.playButtonClick()
+      
+      console.log('Sound Manager: Mobile audio force initialization successful!')
+      return true
+
+    } catch (error) {
+      console.error('Sound Manager: Failed to force initialize mobile audio:', error)
+      return false
+    }
+  }
+
   initFallback() {
     console.log('Sound Manager: Using fallback audio system')
     this.audioContext = null
@@ -118,41 +164,18 @@ class SoundManager {
   }
 
   createFallbackAudio() {
-    // Create HTML5 audio elements as fallback
-    try {
-      const createAudioElement = (frequency, duration) => {
-        const audio = new Audio()
-        audio.preload = 'auto'
-        audio.volume = 0.3
-        
-        // Create a simple beep using data URL (works on most mobile browsers)
-        const context = new (window.AudioContext || window.webkitAudioContext)()
-        const sampleRate = 8000 // Very low for compatibility
-        const frameCount = duration * sampleRate
-        const buffer = context.createBuffer(1, frameCount, sampleRate)
-        const channelData = buffer.getChannelData(0)
-        
-        for (let i = 0; i < frameCount; i++) {
-          const t = i / sampleRate
-          const amplitude = Math.exp(-t * 20) * 0.3
-          channelData[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude
-        }
-        
-        return audio
-      }
-      
-      // Note: Fallback will use CSS click sounds or vibration
-      this.fallbackAudio.set('buttonClick', null)
-      this.fallbackAudio.set('success', null)
-      this.fallbackAudio.set('error', null)
-      
-    } catch (error) {
-      console.warn('Sound Manager: Fallback audio creation failed:', error)
-    }
+    // Create simple fallback system for mobile
+    console.log('Sound Manager: Creating fallback audio system for mobile')
+    this.fallbackAudio.set('buttonClick', true)
+    this.fallbackAudio.set('success', true)
+    this.fallbackAudio.set('error', true)
   }
 
   async loadSounds() {
-    if (!this.audioContext) return
+    if (!this.audioContext) {
+      console.log('Sound Manager: No AudioContext, using fallback sounds')
+      return
+    }
     
     try {
       console.log('Sound Manager: Loading sounds...')
@@ -184,7 +207,7 @@ class SoundManager {
     for (let i = 0; i < frameCount; i++) {
       const t = i / sampleRate
       const frequency = 1000 + (600 * Math.exp(-t * 25)) // Higher frequency for mobile speakers
-      const amplitude = Math.exp(-t * 35) * (this.isMobile ? 0.4 : 0.3) // Slightly louder on mobile
+      const amplitude = Math.exp(-t * 35) * (this.isMobile ? 0.5 : 0.3) // Louder on mobile
       channelData[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude
     }
 
@@ -222,7 +245,7 @@ class SoundManager {
     for (let i = 0; i < frameCount; i++) {
       const t = i / sampleRate
       const frequency = 523 + (200 * Math.sin(t * 8)) // C note with modulation
-      const amplitude = Math.exp(-t * 4) * (this.isMobile ? 0.25 : 0.2)
+      const amplitude = Math.exp(-t * 4) * (this.isMobile ? 0.3 : 0.2)
       channelData[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude
     }
 
@@ -241,7 +264,7 @@ class SoundManager {
     for (let i = 0; i < frameCount; i++) {
       const t = i / sampleRate
       const frequency = 300 - (100 * t) // Descending tone
-      const amplitude = Math.exp(-t * 6) * (this.isMobile ? 0.3 : 0.25)
+      const amplitude = Math.exp(-t * 6) * (this.isMobile ? 0.4 : 0.25)
       channelData[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude
     }
 
@@ -252,26 +275,41 @@ class SoundManager {
     if (!this.isEnabled || !this.initialized) return
 
     try {
+      // First ensure we have user interaction for mobile
+      if (!this.hasUserInteracted) {
+        console.log('Sound Manager: No user interaction yet, using fallback')
+        this.playFallbackSound(soundName)
+        return
+      }
+
       // Ensure audio context is resumed (mobile requirement)
       await this.ensureAudioContextResumed()
       
+      // Load sounds if not loaded yet
+      if (!this.soundsLoaded && this.audioContext) {
+        await this.loadSounds()
+        this.soundsLoaded = true
+      }
+      
       const sound = this.sounds[soundName]
       
-      if (sound && this.audioContext) {
+      if (sound && this.audioContext && this.audioContext.state === 'running') {
         // Web Audio API playback
         const source = this.audioContext.createBufferSource()
         const gainNode = this.audioContext.createGain()
         
         source.buffer = sound
-        gainNode.gain.value = volume * (this.isMobile ? 0.6 : 0.4) // Adjust volume for mobile
+        gainNode.gain.value = volume * (this.isMobile ? 0.7 : 0.4) // Higher volume for mobile
         
         source.connect(gainNode)
         gainNode.connect(this.audioContext.destination)
         
         source.start(0)
+        console.log(`Sound Manager: Played ${soundName} via Web Audio API`)
         
       } else {
         // Fallback: Use haptic feedback on mobile if available
+        console.log(`Sound Manager: Using fallback for ${soundName}`)
         this.playFallbackSound(soundName)
       }
       
@@ -286,17 +324,22 @@ class SoundManager {
     if (this.isMobile && 'vibrate' in navigator) {
       switch (soundName) {
         case 'buttonClick':
-          navigator.vibrate(10) // Very short vibration
+          navigator.vibrate(20) // Slightly longer vibration for feedback
+          console.log('Sound Manager: Button click vibration')
           break
         case 'success':
           navigator.vibrate([50, 30, 50]) // Success pattern
+          console.log('Sound Manager: Success vibration pattern')
           break
         case 'error':
           navigator.vibrate([100, 50, 100, 50, 100]) // Error pattern
+          console.log('Sound Manager: Error vibration pattern')
           break
         default:
-          navigator.vibrate(5)
+          navigator.vibrate(10)
       }
+    } else {
+      console.log(`Sound Manager: No fallback available for ${soundName}`)
     }
   }
 
@@ -311,10 +354,17 @@ class SoundManager {
     }
   }
 
-  handleUserInteraction() {
+  async handleUserInteraction() {
     if (!this.hasUserInteracted) {
+      console.log('Sound Manager: Handling user interaction')
       this.hasUserInteracted = true
-      this.ensureAudioContextResumed()
+      await this.ensureAudioContextResumed()
+      
+      // Load sounds immediately after user interaction
+      if (!this.soundsLoaded && this.audioContext) {
+        await this.loadSounds()
+        this.soundsLoaded = true
+      }
     }
   }
 
@@ -324,8 +374,23 @@ class SoundManager {
     console.log('Sound Manager: Sound enabled set to:', enabled)
   }
 
+  setMobileAudioEnabled(enabled) {
+    this.mobileAudioForceEnabled = enabled
+    settingsManager.updateSettings({ mobileAudioEnabled: enabled })
+    console.log('Sound Manager: Mobile audio enabled set to:', enabled)
+    
+    // If enabling on mobile, force initialize audio
+    if (enabled && this.isMobile) {
+      this.forceMobileAudioInit()
+    }
+  }
+
   isAudioEnabled() {
     return this.isEnabled
+  }
+
+  isMobileAudioEnabled() {
+    return this.mobileAudioForceEnabled
   }
 
   // Specific sound methods with mobile optimization
@@ -347,49 +412,6 @@ class SoundManager {
   async playError() {
     await this.playSound('error')
   }
-
-  // PWA-specific method to ensure audio works when app is installed
-  async initializePWAAudio() {
-    if (this.isPWA && !this.hasUserInteracted) {
-      console.log('Sound Manager: PWA detected, setting up audio...')
-      
-      // PWAs need explicit user interaction
-      const initButton = document.createElement('button')
-      initButton.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10000;
-        padding: 1rem 2rem;
-        background: #6366f1;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-      `
-      initButton.textContent = 'Enable Sound 🔊'
-      
-      initButton.onclick = async () => {
-        await this.handleUserInteraction()
-        if (!this.sounds.buttonClick) {
-          await this.loadSounds()
-        }
-        document.body.removeChild(initButton)
-        await this.playButtonClick() // Test sound
-      }
-      
-      document.body.appendChild(initButton)
-      
-      // Auto-remove after 5 seconds
-      setTimeout(() => {
-        if (document.body.contains(initButton)) {
-          document.body.removeChild(initButton)
-        }
-      }, 5000)
-    }
-  }
 }
 
 // Create singleton instance
@@ -402,13 +424,10 @@ export const playSuccess = () => soundManager.playSuccess()
 export const playError = () => soundManager.playError()
 export const setSoundEnabled = (enabled) => soundManager.setEnabled(enabled)
 export const isSoundEnabled = () => soundManager.isAudioEnabled()
+export const setMobileAudioEnabled = (enabled) => soundManager.setMobileAudioEnabled(enabled)
+export const isMobileAudioEnabled = () => soundManager.isMobileAudioEnabled()
+export const forceMobileAudioInit = () => soundManager.forceMobileAudioInit()
 export const resumeAudio = () => soundManager.ensureAudioContextResumed()
 export const handleUserInteraction = () => soundManager.handleUserInteraction()
-export const initializePWAAudio = () => soundManager.initializePWAAudio()
-
-// Auto-initialize PWA audio if needed
-if (soundManager.isPWA) {
-  setTimeout(() => soundManager.initializePWAAudio(), 1000)
-}
 
 export default soundManager 

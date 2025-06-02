@@ -200,11 +200,15 @@ export const settingsManager = {
       precision: 10,
       angleUnit: 'degrees', // 'degrees' or 'radians'
       numberFormat: 'auto', // 'auto', 'scientific', 'engineering'
-      soundEnabled: false,
+      soundEnabled: true,
       hapticEnabled: true,
       hasSeenTutorial: false,
       lastCalculatorTutorial: '',
-      hideAddressBarMobile: true // Hide address bar on mobile devices by default
+      hideAddressBarMobile: true, // Hide address bar on mobile devices by default
+      mobileAudioEnabled: true, // New setting for mobile audio initialization
+      scientificMode: 'deg',
+      programmerBase: 'dec',
+      converterCategory: 'length'
     })
   },
 

@@ -27,8 +27,8 @@ const Button = ({
   const handleClick = useCallback(async (e) => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio
-    handleUserInteraction()
+    // Handle user interaction for mobile/PWA audio FIRST
+    await handleUserInteraction()
     
     // Resume audio context on user interaction
     await resumeAudio()
@@ -48,7 +48,7 @@ const Button = ({
     if (disabled) return
     
     // Handle user interaction for mobile/PWA audio
-    handleUserInteraction()
+    await handleUserInteraction()
     
     // Resume audio context
     await resumeAudio()
@@ -59,11 +59,11 @@ const Button = ({
     }
   }, [disabled, enableSound])
 
-  const handleMouseDown = useCallback((e) => {
+  const handleMouseDown = useCallback(async (e) => {
     if (disabled) return
     
     // Handle user interaction for mobile/PWA audio
-    handleUserInteraction()
+    await handleUserInteraction()
     
     if (onMouseDown) {
       onMouseDown(e)
@@ -78,11 +78,12 @@ const Button = ({
     }
   }, [onMouseUp, disabled])
 
-  const handleTouchStart = useCallback((e) => {
+  const handleTouchStart = useCallback(async (e) => {
     if (disabled) return
     
-    // Handle user interaction for mobile/PWA audio
-    handleUserInteraction()
+    // Handle user interaction for mobile/PWA audio - VERY IMPORTANT for mobile
+    await handleUserInteraction()
+    await resumeAudio()
     
     if (onTouchStart) {
       onTouchStart(e)

@@ -3,7 +3,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import CalculatorApp from "./components/CalculatorApp";
 import { settingsManager } from "./utils/localStorage";
 import { initializeMobileOptimizations, isMobileDevice } from "./utils/mobileUtils";
-import { initializePWAAudio, handleUserInteraction } from "./utils/sounds";
+import { handleUserInteraction } from "./utils/sounds";
 import "./styles/App.css";
 
 function App() {
@@ -36,12 +36,8 @@ function App() {
     }
   }, []);
 
-  // Initialize PWA audio support
+  // Set up early user interaction handling for better audio support
   useEffect(() => {
-    // Initialize PWA audio if needed
-    initializePWAAudio();
-    
-    // Set up early user interaction handling for better audio support
     const setupAudioInteraction = () => {
       handleUserInteraction();
     };

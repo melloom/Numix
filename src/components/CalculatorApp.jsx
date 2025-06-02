@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { settingsManager } from '../utils/localStorage'
-import { isSoundEnabled, setSoundEnabled } from '../utils/sounds'
+import { isSoundEnabled, setSoundEnabled, isMobileAudioEnabled, setMobileAudioEnabled, forceMobileAudioInit } from '../utils/sounds'
 import { isMobileDevice, hideAddressBar, showAddressBar, isAddressBarHidingSupported, isStandaloneMode } from '../utils/mobileUtils'
 import ThemeToggle from './ThemeToggle'
 import History from './common/History'
@@ -51,6 +51,7 @@ const CalculatorApp = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled())
+  const [mobileAudioEnabled, setMobileAudioEnabledState] = useState(isMobileAudioEnabled())
   const [hideAddressBarMobile, setHideAddressBarMobile] = useState(() => {
     const settings = settingsManager.getSettings()
     return settings.hideAddressBarMobile
@@ -123,6 +124,26 @@ const CalculatorApp = () => {
         const { playSuccess } = await import('../utils/sounds')
         playSuccess()
       }, 100)
+    }
+  }
+
+  const toggleMobileAudio = async () => {
+    const newMobileAudioState = !mobileAudioEnabled
+    setMobileAudioEnabled(newMobileAudioState)
+    setMobileAudioEnabledState(newMobileAudioState)
+    
+    if (newMobileAudioState && isMobileDevice()) {
+      // Force initialize mobile audio when enabling
+      try {
+        const success = await forceMobileAudioInit()
+        if (success) {
+          console.log('Mobile audio initialized successfully!')
+        } else {
+          console.warn('Failed to initialize mobile audio')
+        }
+      } catch (error) {
+        console.error('Error initializing mobile audio:', error)
+      }
     }
   }
 
@@ -253,6 +274,25 @@ const CalculatorApp = () => {
                         </div>
                       </button>
                     </div>
+
+                    {/* Mobile Audio Initialization Setting - Only show on mobile */}
+                    {isMobileDevice() && (
+                      <div className="setting-item">
+                        <div className="setting-info">
+                          <span className="setting-label">Mobile Audio Init</span>
+                          <span className="setting-description">Force audio initialization to bypass mobile restrictions</span>
+                        </div>
+                        <button 
+                          className={`setting-toggle ${mobileAudioEnabled ? 'active' : ''}`}
+                          onClick={toggleMobileAudio}
+                          aria-label={`${mobileAudioEnabled ? 'Disable' : 'Enable'} mobile audio initialization`}
+                        >
+                          <div className="toggle-track">
+                            <div className="toggle-thumb"></div>
+                          </div>
+                        </button>
+                      </div>
+                    )}
                     
                     {/* Show info for standalone mode users */}
                     {isStandaloneMode() && (
