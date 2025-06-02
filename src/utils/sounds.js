@@ -12,6 +12,9 @@ class SoundManager {
     this.currentIndex = 0
     this.audioContext = null
     
+    // Use the specific sound file
+    this.soundFile = '/assets/ui-pop-sound-316482.mp3'
+    
     // Initialize immediately
     this.init()
   }
@@ -33,55 +36,11 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create a click sound using data URL
-    const createClickSound = () => {
-      const sampleRate = 8000
-      const duration = 0.05
-      const numSamples = Math.floor(sampleRate * duration)
-      
-      // Create WAV file header
-      const arrayBuffer = new ArrayBuffer(44 + numSamples * 2)
-      const view = new DataView(arrayBuffer)
-      
-      // RIFF chunk descriptor
-      view.setUint32(0, 0x46464952, false) // 'RIFF'
-      view.setUint32(4, 36 + numSamples * 2, true)
-      view.setUint32(8, 0x45564157, false) // 'WAVE'
-      
-      // fmt sub-chunk
-      view.setUint32(12, 0x20746d66, false) // 'fmt '
-      view.setUint32(16, 16, true) // subchunk1Size
-      view.setUint16(20, 1, true) // audioFormat (PCM)
-      view.setUint16(22, 1, true) // numChannels
-      view.setUint32(24, sampleRate, true) // sampleRate
-      view.setUint32(28, sampleRate * 2, true) // byteRate
-      view.setUint16(32, 2, true) // blockAlign
-      view.setUint16(34, 16, true) // bitsPerSample
-      
-      // data sub-chunk
-      view.setUint32(36, 0x61746164, false) // 'data'
-      view.setUint32(40, numSamples * 2, true)
-      
-      // Generate click sound
-      for (let i = 0; i < numSamples; i++) {
-        const t = i / sampleRate
-        const amplitude = Math.exp(-t * 40) * 0.7
-        const frequency = 1000
-        const sample = Math.sin(2 * Math.PI * frequency * t) * amplitude
-        view.setInt16(44 + i * 2, Math.floor(sample * 32767), true)
-      }
-      
-      const blob = new Blob([arrayBuffer], { type: 'audio/wav' })
-      return URL.createObjectURL(blob)
-    }
-    
-    const soundUrl = createClickSound()
-    
-    // Create 5 audio elements for rapid clicking
+    // Create 5 audio elements for rapid clicking using the MP3 file
     for (let i = 0; i < 5; i++) {
       const audio = new Audio()
-      audio.src = soundUrl
-      audio.volume = 1.0
+      audio.src = this.soundFile
+      audio.volume = 0.8 // Slightly lower volume for better experience
       audio.preload = 'auto'
       
       // Load the audio
@@ -162,7 +121,7 @@ class SoundManager {
     
     // Always vibrate on mobile
     if (this.isMobile && navigator.vibrate) {
-      navigator.vibrate(10)
+      navigator.vibrate(8)
     }
   }
 
