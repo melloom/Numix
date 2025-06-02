@@ -126,23 +126,6 @@ const CalculatorApp = () => {
     }
   }
 
-  const testMobileAudio = async () => {
-    try {
-      const { forceMobileAudioInit, playButtonClick } = await import('../utils/sounds')
-      
-      // Force audio initialization
-      forceMobileAudioInit()
-      
-      // Wait a bit then play test sound
-      setTimeout(() => {
-        playButtonClick()
-        console.log('Mobile audio test triggered')
-      }, 500)
-    } catch (error) {
-      console.error('Mobile audio test failed:', error)
-    }
-  }
-
   const toggleHideAddressBar = () => {
     const newHideAddressBarState = !hideAddressBarMobile
     setHideAddressBarMobile(newHideAddressBarState)
@@ -259,10 +242,7 @@ const CalculatorApp = () => {
                       <div className="setting-info">
                         <span className="setting-label">Sound Effects</span>
                         <span className="setting-description">
-                          {isMobileDevice() 
-                            ? 'Button sounds & mobile audio optimization' 
-                            : 'Button click sounds'
-                          }
+                          Button click sounds using ui-pop-sound-316482.mp3
                         </span>
                       </div>
                       <button 
@@ -275,22 +255,6 @@ const CalculatorApp = () => {
                         </div>
                       </button>
                     </div>
-                    
-                    {/* Mobile Audio Test Button */}
-                    {isMobileDevice() && soundEnabled && (
-                      <div className="setting-item">
-                        <div className="setting-info">
-                          <span className="setting-label">Mobile Audio Test</span>
-                          <span className="setting-description">Force audio unlock if sounds don't work</span>
-                        </div>
-                        <button 
-                          className="setting-action"
-                          onClick={testMobileAudio}
-                        >
-                          Test Audio
-                        </button>
-                      </div>
-                    )}
                     
                     {/* Show info for standalone mode users */}
                     {isStandaloneMode() && (
