@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react'
-import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled } from '../../utils/sounds'
+import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled, forceMobileAudioInit, emergencyStopAudio } from '../../utils/sounds'
 import './Button.css'
 
 const Button = ({ 
@@ -39,7 +39,7 @@ const Button = ({
     
     const now = Date.now()
     
-    console.log('🔘 Button clicked:', { 
+    console.log('Button clicked:', { 
       disabled, 
       enableSound, 
       soundDisabled,
@@ -48,20 +48,20 @@ const Button = ({
     
     // Ultra-aggressive debouncing
     if (now - lastClickTime.current < debounceMs) {
-      console.log('🔘 Click debounced')
+      console.log('Click debounced')
       return
     }
     
     // Prevent re-entry during processing
     if (isProcessing.current) {
-      console.log('🔘 Already processing click')
+      console.log('Already processing click')
       return
     }
     
     // Track rapid clicks and block if too many
     clickCount.current++
     if (clickCount.current > 3) {
-      console.log('🔘 Too many rapid clicks, blocking')
+      console.log('Too many rapid clicks, blocking')
       // Reset click count after a longer delay
       setTimeout(() => {
         clickCount.current = 0
@@ -78,27 +78,29 @@ const Button = ({
     }, 300)
     
     try {
-      console.log('🔘 Processing button click...')
+      console.log('Processing button click...')
       
-      // Simple user interaction trigger (sound system handles the rest)
+      // AGGRESSIVE mobile audio initialization
+      forceMobileAudioInit()
       handleUserInteraction()
+      resumeAudio()
       
-      // Play sound - the sound system is already initialized
+      // Try to play sound immediately for better responsiveness
       if (enableSound && !disabled) {
-        console.log('🔘 Playing click sound')
+        console.log('Attempting to play click sound')
         playButtonClick()
       }
       
-      // Call the original onClick handler immediately
+      // Call the original onClick handler immediately (no delay)
       if (onClick && !disabled) {
-        console.log('🔘 Calling onClick handler')
+        console.log('Calling onClick handler')
         onClick(e)
       }
       
     } catch (error) {
       console.warn('Button click error:', error)
     } finally {
-      // Release processing lock quickly
+      // Release processing lock after a shorter delay
       setTimeout(() => {
         isProcessing.current = false
       }, 50)
@@ -109,28 +111,36 @@ const Button = ({
     if (disabled || isProcessing.current) return
     
     try {
-      // Simple interaction trigger - sound system handles initialization
+      // Force mobile audio init - INSTANT
+      forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
       handleUserInteraction()
+      
+      // Resume audio context - INSTANT  
+      resumeAudio()
       
       // NO hover sounds to prevent audio spam
       
     } catch (error) {
-      // Silently ignore hover errors
+      // Silently ignore hover sound errors
     }
-  }, [disabled])
+  }, [disabled, enableSound])
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    console.log('🔘 Mouse down')
+    console.log('Mouse down on button')
     
-    // Prevent defaults
+    // Prevent defaults more aggressively
     e.preventDefault()
     e.stopPropagation()
     
     try {
-      // Trigger user interaction for sound system
+      // AGGRESSIVE audio initialization on mouse down
+      forceMobileAudioInit()
       handleUserInteraction()
+      resumeAudio()
       
       if (onMouseDown) {
         onMouseDown(e)
@@ -155,16 +165,24 @@ const Button = ({
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    console.log('🔘 Touch start')
+    console.log('Touch start on button')
     
-    // Prevent defaults on touch
+    // Prevent defaults even more aggressively on touch
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
     
     try {
-      // Trigger user interaction - sound system will handle audio context
+      // SUPER AGGRESSIVE mobile audio init on touch
+      forceMobileAudioInit()
       handleUserInteraction()
+      resumeAudio()
+      
+      // Force another attempt at audio initialization
+      setTimeout(() => {
+        forceMobileAudioInit()
+        handleUserInteraction()
+      }, 10)
       
       if (onTouchStart) {
         onTouchStart(e)
@@ -177,13 +195,17 @@ const Button = ({
   const handleTouchEnd = useCallback((e) => {
     if (disabled) return
     
-    console.log('🔘 Touch end')
+    console.log('Touch end on button')
     
-    // Prevent touch conflicts
+    // Prevent touch end from triggering additional events
     e.preventDefault()
     e.stopPropagation()
     
     try {
+      // One more attempt at audio initialization
+      forceMobileAudioInit()
+      handleUserInteraction()
+      
       if (onTouchEnd) {
         onTouchEnd(e)
       }
@@ -202,7 +224,7 @@ const Button = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       disabled={disabled}
-      // Prevent context menu and selection
+      // Prevent context menu and selection to avoid conflicts
       onContextMenu={(e) => e.preventDefault()}
       onSelectStart={(e) => e.preventDefault()}
       onDragStart={(e) => e.preventDefault()}
