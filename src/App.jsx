@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { stopAllSounds } from './utils/sounds'
+import { stopAllSounds, emergencyStopAudio } from './utils/sounds'
 import { isMobileDevice, setupMobileViewport, isAddressBarHidingSupported, hideAddressBar } from './utils/mobileUtils'
 import { settingsManager } from './utils/localStorage'
 import CalculatorApp from './components/CalculatorApp'
@@ -21,8 +21,9 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     console.error('Calculator app crashed:', error, errorInfo)
     
-    // Stop all sounds to prevent audio issues
+    // EMERGENCY: Stop ALL audio immediately
     try {
+      emergencyStopAudio()
       stopAllSounds()
     } catch (e) {
       console.warn('Failed to stop sounds after crash:', e)
@@ -32,8 +33,9 @@ class ErrorBoundary extends React.Component {
   handleReset = () => {
     this.setState({ hasError: false, error: null })
     
-    // Clear any lingering audio issues
+    // Clear any lingering audio issues AGAIN
     try {
+      emergencyStopAudio()
       stopAllSounds()
     } catch (e) {
       console.warn('Failed to stop sounds during reset:', e)
@@ -68,7 +70,7 @@ function App() {
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    // Performance monitoring
+    // Performance monitoring with audio cleanup
     let performanceWarnings = 0
     const maxWarnings = 3
     
@@ -81,8 +83,9 @@ function App() {
           console.warn('High memory usage detected:', Math.round(memoryUsage * 100) + '%')
           
           if (performanceWarnings >= maxWarnings) {
-            // Force cleanup
+            // Force cleanup INCLUDING audio
             try {
+              emergencyStopAudio()
               stopAllSounds()
               if (global.gc) {
                 global.gc()
@@ -140,11 +143,23 @@ function App() {
           clearInterval(performanceInterval)
           window.removeEventListener('resize', updateVH)
           window.removeEventListener('orientationchange', updateVH)
+          // Cleanup audio when component unmounts
+          try {
+            emergencyStopAudio()
+          } catch (e) {
+            console.warn('Cleanup on unmount failed:', e)
+          }
         }
       }
       
       return () => {
         clearInterval(performanceInterval)
+        // Cleanup audio when component unmounts
+        try {
+          emergencyStopAudio()
+        } catch (e) {
+          console.warn('Cleanup on unmount failed:', e)
+        }
       }
       
     } catch (error) {
@@ -159,6 +174,7 @@ function App() {
     const handleGlobalError = (event) => {
       console.error('Global error:', event.error)
       try {
+        emergencyStopAudio()
         stopAllSounds()
       } catch (e) {
         console.warn('Failed to stop sounds after global error:', e)
@@ -168,6 +184,7 @@ function App() {
     const handleUnhandledRejection = (event) => {
       console.error('Unhandled promise rejection:', event.reason)
       try {
+        emergencyStopAudio()
         stopAllSounds()
       } catch (e) {
         console.warn('Failed to stop sounds after promise rejection:', e)
@@ -180,6 +197,26 @@ function App() {
     return () => {
       window.removeEventListener('error', handleGlobalError)
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
+
+  // Page visibility change handler to stop audio when tab is hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        try {
+          emergencyStopAudio()
+          stopAllSounds()
+        } catch (e) {
+          console.warn('Failed to stop sounds on visibility change:', e)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 

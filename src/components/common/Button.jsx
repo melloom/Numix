@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react'
-import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled, forceMobileAudioInit } from '../../utils/sounds'
+import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled } from '../../utils/sounds'
 import './Button.css'
 
 const Button = ({ 
@@ -13,65 +13,92 @@ const Button = ({
   onTouchStart,
   onTouchEnd,
   enableSound = true,
-  debounceMs = 150,
+  debounceMs = 200,
   ...props 
 }) => {
   const soundDisabled = !isSoundEnabled() || !enableSound
   const lastClickTime = useRef(0)
   const isProcessing = useRef(false)
+  const clickCount = useRef(0)
   
   const buttonClass = [
     'calc-button',
     `calc-button--${variant}`,
     soundDisabled ? 'sound-disabled' : '',
+    disabled ? 'disabled' : '',
     className
   ].filter(Boolean).join(' ')
 
   const handleClick = useCallback((e) => {
     if (disabled) return
     
-    // Prevent default to avoid double-firing on some devices
+    // Prevent all default behaviors
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
     
     const now = Date.now()
     
-    // Debounce: prevent multiple rapid clicks
+    console.log('🔘 Button clicked:', { 
+      disabled, 
+      enableSound, 
+      soundDisabled,
+      timeSinceLastClick: now - lastClickTime.current 
+    })
+    
+    // Ultra-aggressive debouncing
     if (now - lastClickTime.current < debounceMs) {
+      console.log('🔘 Click debounced')
       return
     }
     
     // Prevent re-entry during processing
     if (isProcessing.current) {
+      console.log('🔘 Already processing click')
+      return
+    }
+    
+    // Track rapid clicks and block if too many
+    clickCount.current++
+    if (clickCount.current > 3) {
+      console.log('🔘 Too many rapid clicks, blocking')
+      // Reset click count after a longer delay
+      setTimeout(() => {
+        clickCount.current = 0
+      }, 1000)
       return
     }
     
     isProcessing.current = true
     lastClickTime.current = now
     
+    // Reset click count after normal operation
+    setTimeout(() => {
+      clickCount.current = Math.max(0, clickCount.current - 1)
+    }, 300)
+    
     try {
-      // Force mobile audio init - INSTANT
-      forceMobileAudioInit()
+      console.log('🔘 Processing button click...')
       
-      // Handle user interaction for mobile/PWA audio - INSTANT
+      // Simple user interaction trigger (sound system handles the rest)
       handleUserInteraction()
       
-      // Resume audio context - INSTANT
-      resumeAudio()
-      
-      // Play click sound - INSTANT, no await
-      if (enableSound) {
+      // Play sound - the sound system is already initialized
+      if (enableSound && !disabled) {
+        console.log('🔘 Playing click sound')
         playButtonClick()
       }
       
-      // Call the original onClick handler
-      if (onClick) {
+      // Call the original onClick handler immediately
+      if (onClick && !disabled) {
+        console.log('🔘 Calling onClick handler')
         onClick(e)
       }
+      
     } catch (error) {
       console.warn('Button click error:', error)
     } finally {
-      // Release processing lock after a short delay
+      // Release processing lock quickly
       setTimeout(() => {
         isProcessing.current = false
       }, 50)
@@ -82,35 +109,27 @@ const Button = ({
     if (disabled || isProcessing.current) return
     
     try {
-      // Force mobile audio init - INSTANT
-      forceMobileAudioInit()
-      
-      // Handle user interaction for mobile/PWA audio - INSTANT
+      // Simple interaction trigger - sound system handles initialization
       handleUserInteraction()
       
-      // Resume audio context - INSTANT  
-      resumeAudio()
+      // NO hover sounds to prevent audio spam
       
-      // Play subtle hover sound - INSTANT, no await
-      if (enableSound) {
-        playButtonHover()
-      }
     } catch (error) {
-      // Silently ignore hover sound errors
+      // Silently ignore hover errors
     }
-  }, [disabled, enableSound])
+  }, [disabled])
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    // Prevent default to avoid conflicts
+    console.log('🔘 Mouse down')
+    
+    // Prevent defaults
     e.preventDefault()
+    e.stopPropagation()
     
     try {
-      // Force mobile audio init - INSTANT
-      forceMobileAudioInit()
-      
-      // Handle user interaction for mobile/PWA audio - INSTANT
+      // Trigger user interaction for sound system
       handleUserInteraction()
       
       if (onMouseDown) {
@@ -136,19 +155,16 @@ const Button = ({
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    // Prevent default to avoid conflicts with mouse events on mobile
+    console.log('🔘 Touch start')
+    
+    // Prevent defaults on touch
     e.preventDefault()
     e.stopPropagation()
+    e.stopImmediatePropagation()
     
     try {
-      // Force mobile audio init - INSTANT
-      forceMobileAudioInit()
-      
-      // Handle user interaction for mobile/PWA audio - INSTANT
+      // Trigger user interaction - sound system will handle audio context
       handleUserInteraction()
-      
-      // Resume audio context - INSTANT
-      resumeAudio()
       
       if (onTouchStart) {
         onTouchStart(e)
@@ -160,6 +176,12 @@ const Button = ({
 
   const handleTouchEnd = useCallback((e) => {
     if (disabled) return
+    
+    console.log('🔘 Touch end')
+    
+    // Prevent touch conflicts
+    e.preventDefault()
+    e.stopPropagation()
     
     try {
       if (onTouchEnd) {
@@ -180,6 +202,13 @@ const Button = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       disabled={disabled}
+      // Prevent context menu and selection
+      onContextMenu={(e) => e.preventDefault()}
+      onSelectStart={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+      // Additional touch event prevention
+      onTouchMove={(e) => e.preventDefault()}
+      onTouchCancel={(e) => e.preventDefault()}
       {...props}
     >
       {children}
