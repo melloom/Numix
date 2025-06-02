@@ -203,7 +203,8 @@ export const settingsManager = {
       soundEnabled: false,
       hapticEnabled: true,
       hasSeenTutorial: false,
-      lastCalculatorTutorial: ''
+      lastCalculatorTutorial: '',
+      hideAddressBarMobile: true // Hide address bar on mobile devices by default
     })
   },
 

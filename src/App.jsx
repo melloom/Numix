@@ -1,6 +1,8 @@
 import React, { useEffect } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import CalculatorApp from "./components/CalculatorApp";
+import { settingsManager } from "./utils/localStorage";
+import { initializeMobileOptimizations, isMobileDevice } from "./utils/mobileUtils";
 import "./styles/App.css";
 
 function App() {
@@ -19,6 +21,18 @@ function App() {
       window.removeEventListener('resize', setVh);
       window.removeEventListener('orientationchange', setVh);
     };
+  }, []);
+
+  // Initialize mobile optimizations based on user settings
+  useEffect(() => {
+    if (isMobileDevice()) {
+      const settings = settingsManager.getSettings();
+      initializeMobileOptimizations({
+        hideAddressBar: settings.hideAddressBarMobile,
+        preventZoom: true,
+        optimizeViewport: true
+      });
+    }
   }, []);
 
   return (

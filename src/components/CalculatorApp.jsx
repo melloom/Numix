@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { settingsManager } from '../utils/localStorage'
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds'
+import { isMobileDevice, hideAddressBar, showAddressBar, isAddressBarHidingSupported, isStandaloneMode } from '../utils/mobileUtils'
 import ThemeToggle from './ThemeToggle'
 import History from './common/History'
 import PWAInstallPrompt from './PWAInstallPrompt'
@@ -50,6 +51,10 @@ const CalculatorApp = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled())
+  const [hideAddressBarMobile, setHideAddressBarMobile] = useState(() => {
+    const settings = settingsManager.getSettings()
+    return settings.hideAddressBarMobile
+  })
   const dropdownRef = useRef(null)
   const settingsRef = useRef(null)
 
@@ -110,6 +115,21 @@ const CalculatorApp = () => {
     const newSoundState = !soundEnabled
     setSoundEnabled(newSoundState)
     setSoundEnabledState(newSoundState)
+  }
+
+  const toggleHideAddressBar = () => {
+    const newHideAddressBarState = !hideAddressBarMobile
+    setHideAddressBarMobile(newHideAddressBarState)
+    
+    // Update settings in localStorage
+    settingsManager.updateSettings({ hideAddressBarMobile: newHideAddressBarState })
+    
+    // Apply the change immediately
+    if (newHideAddressBarState) {
+      hideAddressBar()
+    } else {
+      showAddressBar()
+    }
   }
 
   const resetTutorial = () => {
@@ -224,6 +244,43 @@ const CalculatorApp = () => {
                         </div>
                       </button>
                     </div>
+                    
+                    {/* Show info for standalone mode users */}
+                    {isStandaloneMode() && (
+                      <div className="setting-item">
+                        <div className="setting-info">
+                          <span className="setting-label">Fullscreen Mode</span>
+                          <span className="setting-description">
+                            ✅ Already running in fullscreen mode
+                          </span>
+                        </div>
+                        <div className="setting-status">
+                          Active
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Only show address bar setting if it's supported */}
+                    {isAddressBarHidingSupported() && (
+                      <div className="setting-item">
+                        <div className="setting-info">
+                          <span className="setting-label">Hide Address Bar</span>
+                          <span className="setting-description">
+                            Hide the address bar for fullscreen experience
+                          </span>
+                        </div>
+                        <button 
+                          className={`setting-toggle ${hideAddressBarMobile ? 'active' : ''}`}
+                          onClick={toggleHideAddressBar}
+                          aria-label={`${hideAddressBarMobile ? 'Disable' : 'Enable'} hide address bar`}
+                        >
+                          <div className="toggle-track">
+                            <div className="toggle-thumb"></div>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                    
                     <div className="setting-item">
                       <div className="setting-info">
                         <span className="setting-label">Show Tutorial</span>

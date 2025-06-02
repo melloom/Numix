@@ -110,19 +110,29 @@
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .calc-button {
-    padding: 0.875rem;
-    font-size: 1rem;
-    min-height: 3rem;
-    border-radius: 10px;
+    padding: 1.25rem;
+    font-size: 1.25rem;
+    min-height: 4rem;
+    border-radius: 14px;
+    font-weight: 600;
   }
 }
 
 @media (max-height: 700px) and (max-width: 480px) {
   .calc-button {
-    padding: 0.75rem;
-    font-size: 0.9375rem;
-    min-height: 2.75rem;
-    border-radius: 8px;
+    padding: 1.25rem;
+    font-size: 1.25rem;
+    min-height: 4rem;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 320px) {
+  .calc-button {
+    padding: 1.25rem;
+    font-size: 1.125rem;
+    min-height: 4rem;
+    border-radius: 12px;
   }
 }
 

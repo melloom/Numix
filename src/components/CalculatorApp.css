@@ -275,20 +275,60 @@
   animation: fadeIn 0.4s ease 0.1s both;
 }
 
+/* Mobile viewport height calculation */
 @media (max-width: 480px) {
+  :root {
+    --mobile-height: 100vh;
+    --mobile-height: 100svh; /* Small viewport height for mobile browsers */
+  }
+  
+  body {
+    height: 100vh;
+    height: 100svh;
+    overflow: hidden;
+    position: relative;
+  }
+  
   .calculator-app {
     max-width: 100%;
-    border-radius: 16px;
-    margin: calc(var(--safe-area-inset-top, 0px) + 0.5rem) 0.75rem calc(var(--safe-area-inset-bottom, 0px) + 0.5rem) 0.75rem;
-    box-shadow: var(--shadow-md);
+    width: 100%;
+    height: var(--mobile-height);
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overflow: hidden; /* Prevent any scrolling */
+    position: absolute; /* Changed from fixed to allow address bar behavior */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
   
   .calculator-header {
     padding: 1rem 1rem 0.75rem;
+    flex-shrink: 0;
   }
   
   .calculator-main {
-    padding: 1rem;
+    padding: 0.5rem 1rem 1rem;
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    min-height: 0; /* Allow content to shrink */
+    overflow: hidden;
+  }
+  
+  .calculator-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Allow content to shrink */
   }
   
   .app-title {
@@ -327,7 +367,15 @@
 
 @media (max-height: 700px) and (max-width: 480px) {
   .calculator-app {
-    margin: calc(var(--safe-area-inset-top, 0px) + 0.25rem) 0.5rem calc(var(--safe-area-inset-bottom, 0px) + 0.25rem) 0.5rem;
+    height: 100vh;
+    height: 100svh;
+    margin: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
   }
   
   .calculator-header {
@@ -335,7 +383,8 @@
   }
   
   .calculator-main {
-    padding: 0.75rem 1rem 1rem;
+    padding: 0.5rem 1rem 0.75rem;
+    overflow: hidden;
   }
   
   .app-title {
@@ -346,8 +395,16 @@
 /* Very small screens (iPhone SE, etc.) */
 @media (max-width: 320px) {
   .calculator-app {
-    margin: calc(var(--safe-area-inset-top, 0px) + 0.25rem) 0.5rem calc(var(--safe-area-inset-bottom, 0px) + 0.25rem) 0.5rem;
-    border-radius: 12px;
+    height: 100vh;
+    height: 100svh;
+    margin: 0;
+    border-radius: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
   }
   
   .calculator-header {
@@ -355,7 +412,8 @@
   }
   
   .calculator-main {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem 0.75rem;
+    overflow: hidden;
   }
   
   .app-title {
@@ -374,8 +432,21 @@
 /* Landscape mode optimizations */
 @media (orientation: landscape) and (max-height: 500px) {
   .calculator-app {
-    margin: calc(var(--safe-area-inset-top, 0px) + 0.25rem) calc(var(--safe-area-inset-left, 0px) + 0.5rem) calc(var(--safe-area-inset-bottom, 0px) + 0.25rem) calc(var(--safe-area-inset-right, 0px) + 0.5rem);
-    border-radius: 12px;
+    width: 100vw;
+    height: 100vh;
+    height: 100svh;
+    margin: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
   }
   
   .calculator-header {
@@ -383,7 +454,8 @@
   }
   
   .calculator-main {
-    padding: 0.5rem 1rem 0.75rem;
+    padding: 0.25rem 1rem 0.5rem;
+    overflow: hidden;
   }
   
   .app-title {
@@ -412,7 +484,7 @@
 /* Support for devices with Dynamic Island */
 @media (max-width: 430px) and (max-height: 932px) {
   .calculator-app {
-    margin-top: calc(var(--safe-area-inset-top, 0px) + 0.75rem);
+    /* Full screen layout handles safe areas automatically */
   }
 }
 
@@ -594,15 +666,42 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Setting status indicator */
+.setting-status {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: default;
+  opacity: 0.9;
+}
+
+.setting-status::before {
+  content: '✓';
+  font-size: 0.8rem;
+}
+
 /* Mobile adjustments for settings */
 @media (max-width: 480px) {
+  .settings-container {
+    position: relative;
+  }
+  
   .settings-dropdown {
     position: fixed;
-    top: auto;
-    bottom: calc(100% + 0.5rem);
+    top: 10vh; /* Position from viewport top */
     right: 0.5rem;
     min-width: 260px;
     max-width: calc(100vw - 1rem);
+    z-index: 10001; /* Higher z-index to ensure visibility */
+    max-height: 60vh; /* Limit height to fit in viewport */
+    overflow-y: auto; /* Allow scrolling if needed */
   }
   
   .settings-btn {
