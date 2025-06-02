@@ -1,6 +1,7 @@
 const CACHE_NAME = "numix-calc-v2.0";
 const STATIC_CACHE = "numix-static-v2.0";
 const DYNAMIC_CACHE = "numix-dynamic-v2.0";
+const AUDIO_CACHE = "numix-audio-v1";
 
 // Static assets to cache immediately
 const STATIC_ASSETS = [
@@ -12,16 +13,49 @@ const STATIC_ASSETS = [
   "/icons/icon-512x512.png"
 ];
 
-// Install event - cache static assets
+// Files to cache
+const urlsToCache = [
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './icons/icon-72x72.png',
+  './icons/icon-96x96.png',
+  './icons/icon-128x128.png',
+  './icons/icon-144x144.png',
+  './icons/icon-152x152.png',
+  './icons/icon-192x192.png',
+  './icons/icon-384x384.png',
+  './icons/icon-512x512.png'
+];
+
+// Install event - cache static assets and files
 self.addEventListener("install", (event) => {
   console.log("Service Worker: Installing...");
   
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log("Service Worker: Caching static assets");
-        return cache.addAll(STATIC_ASSETS);
-      })
+    Promise.all([
+      caches.open(STATIC_CACHE)
+        .then((cache) => {
+          console.log("Service Worker: Caching static assets");
+          return cache.addAll(STATIC_ASSETS);
+        }),
+      caches.open(AUDIO_CACHE)
+        .then((cache) => {
+          // Cache the base64 audio data
+          return cache.put(
+            'click.wav',
+            new Response(
+              'data:audio/wav;base64,UklGRh4AAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YfoAAAAA',
+              {
+                headers: {
+                  'Content-Type': 'audio/wav'
+                }
+              }
+            )
+          );
+        })
+    ])
       .then(() => {
         console.log("Service Worker: Skip waiting");
         return self.skipWaiting();
@@ -43,7 +77,8 @@ self.addEventListener("activate", (event) => {
           .filter((name) => 
             name !== STATIC_CACHE && 
             name !== DYNAMIC_CACHE &&
-            name !== CACHE_NAME
+            name !== CACHE_NAME &&
+            name !== AUDIO_CACHE
           )
           .map((name) => {
             console.log("Service Worker: Deleting old cache", name);
@@ -185,6 +220,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   
+  // Special handling for audio files
+  if (request.url.includes('click.wav')) {
+    event.respondWith(
+      caches.match('click.wav').then((response) => {
+        return response || fetch(request);
+      })
+    );
+    return;
+  }
+  
   // Default: Network first, then cache
   event.respondWith(
     fetch(request)
@@ -260,5 +305,16 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+});
+
+// Handle audio playback
+self.addEventListener("fetch", (event) => {
+  if (event.request.url.includes('audio')) {
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
+      })
+    );
   }
 });
