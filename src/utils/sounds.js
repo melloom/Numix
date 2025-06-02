@@ -1,4 +1,4 @@
-// Simplified and reliable sound system for PWA
+// Responsive sound system for PWA - every click makes sound
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -12,8 +12,6 @@ class SoundManager {
     this.currentIndex = 0
     this.audioContext = null
     this.isUnlocking = false
-    this.isPlaying = false
-    this.lastPlayTime = 0
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
@@ -39,8 +37,8 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create 3 audio elements - simple and reliable
-    for (let i = 0; i < 3; i++) {
+    // Create 5 audio elements for rapid clicking without conflicts
+    for (let i = 0; i < 5; i++) {
       const audio = new Audio()
       audio.src = this.soundFile
       audio.volume = 0.8
@@ -85,7 +83,7 @@ class SoundManager {
       // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 150)
+      }, 100)
       
       // Remove listeners
       events.forEach(eventType => {
@@ -104,48 +102,32 @@ class SoundManager {
   }
 
   playSound() {
-    if (!this.isEnabled || !this.initialized || this.isUnlocking || this.isPlaying) return
-    
-    // Prevent too rapid playing
-    const now = Date.now()
-    if (now - this.lastPlayTime < 100) return
-    this.lastPlayTime = now
-    
-    this.isPlaying = true
+    if (!this.isEnabled || !this.initialized || this.isUnlocking) return
     
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume()
     }
     
-    // Get next audio element
+    // Get next audio element - rotate through all elements
     const audio = this.audioElements[this.currentIndex]
     this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
     
     if (audio) {
-      // Stop and reset
+      // Stop and reset current audio
       audio.pause()
       audio.currentTime = 0
       
-      // Play
-      const playPromise = audio.play()
-      if (playPromise) {
-        playPromise.then(() => {
-          // Sound played successfully
-        }).catch(() => {
-          // Silent fail
-        }).finally(() => {
-          // Always reset playing state
-          setTimeout(() => {
-            this.isPlaying = false
-          }, 50)
-        })
-      } else {
-        // Reset playing state immediately if no promise
-        this.isPlaying = false
-      }
-    } else {
-      this.isPlaying = false
+      // Play immediately - don't wait for promises
+      audio.play().catch(() => {
+        // Silent fail - try next audio element if this one fails
+        const nextAudio = this.audioElements[this.currentIndex]
+        if (nextAudio) {
+          nextAudio.pause()
+          nextAudio.currentTime = 0
+          nextAudio.play().catch(() => {})
+        }
+      })
     }
     
     // Always vibrate on mobile as feedback
@@ -165,8 +147,8 @@ class SoundManager {
       }
       
       // Test sound only if not unlocking
-      if (!this.isUnlocking && !this.isPlaying) {
-        setTimeout(() => this.playSound(), 200)
+      if (!this.isUnlocking) {
+        setTimeout(() => this.playSound(), 100)
       }
     }
   }
@@ -200,7 +182,7 @@ class SoundManager {
       // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 150)
+      }, 100)
     }
   }
 }
