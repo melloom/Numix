@@ -1,0 +1,69 @@
+.standard-calculator {
+  width: 100%;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  animation: slideIn 0.3s ease 0.2s both;
+}
+
+/* Layout adjustments for mobile */
+@media (max-width: 480px) {
+  .button-grid {
+    gap: 0.625rem;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 480px) {
+  .button-grid {
+    gap: 0.5rem;
+  }
+}
+
+/* Special button styling within standard calculator */
+.standard-calculator .calc-button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Number buttons get a subtle animation on press */
+.standard-calculator .calc-button:not(.calc-button--operator):not(.calc-button--secondary):active {
+  animation: pulse 0.15s ease;
+}
+
+/* Make zero button span 2 columns */
+.standard-calculator .button-grid .span-2 {
+  grid-column: span 2;
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 320px) {
+  .button-grid {
+    gap: 0.5rem;
+  }
+}
+
+/* Enhanced visual feedback for standard calculator */
+.standard-calculator .calc-button--operator {
+  position: relative;
+  overflow: hidden;
+}
+
+.standard-calculator .calc-button--operator::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.standard-calculator .calc-button--operator:active::after {
+  width: 100px;
+  height: 100px;
+} 

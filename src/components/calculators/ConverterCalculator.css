@@ -1,0 +1,518 @@
+.converter-calculator {
+  width: 100%;
+}
+
+.result-display {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.result-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  text-align: right;
+  word-break: break-all;
+}
+
+.currency-info {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.rate-error {
+  color: var(--accent-warning);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.rate-updated {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.refresh-rates {
+  background: var(--accent-secondary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refresh-rates:hover:not(:disabled) {
+  background: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.refresh-rates:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.conversion-controls {
+  margin-bottom: 1rem;
+}
+
+.conversion-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.type-button {
+  font-size: 0.8125rem !important;
+  padding: 0.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  min-height: 4rem !important;
+}
+
+.type-icon {
+  font-size: 1.125rem;
+  margin-bottom: 0.125rem;
+}
+
+.type-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.unit-selectors {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.unit-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unit-selector label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.unit-selector select {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  min-height: 3rem;
+}
+
+.unit-selector select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.unit-selector select:hover {
+  border-color: var(--accent-primary);
+}
+
+.swap-button {
+  align-self: end;
+  min-height: 3rem !important;
+  padding: 0.75rem !important;
+  font-size: 1.25rem !important;
+  width: 3rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.swap-button:hover {
+  transform: rotate(180deg) translateY(-2px) !important;
+  background: var(--accent-primary) !important;
+  color: white !important;
+}
+
+.converter-keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  animation: slideIn 0.3s ease 0.2s both;
+}
+
+/* Enhanced button styling for converter */
+.converter-calculator .calc-button {
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.converter-calculator .calc-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .converter-keypad {
+    gap: 0.625rem;
+  }
+  
+  .conversion-type-selector {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.875rem;
+  }
+  
+  .type-button {
+    min-height: 3.5rem !important;
+    font-size: 0.75rem !important;
+    padding: 0.625rem !important;
+  }
+  
+  .type-icon {
+    font-size: 1rem;
+  }
+  
+  .type-label {
+    font-size: 0.6875rem;
+  }
+  
+  .unit-selectors {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .swap-button {
+    order: -1;
+    justify-self: center;
+    width: auto !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 1.125rem !important;
+  }
+  
+  .unit-selector select {
+    font-size: 0.8125rem;
+    padding: 0.625rem;
+    min-height: 2.75rem;
+  }
+  
+  .result-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+  
+  .result-value {
+    font-size: 1.125rem;
+    align-self: flex-end;
+  }
+  
+  .currency-info {
+    padding: 0.625rem;
+  }
+  
+  .refresh-rates {
+    font-size: 0.6875rem;
+    padding: 0.375rem 0.625rem;
+  }
+  
+  .converter-calculator .calc-button {
+    font-size: 0.875rem;
+    min-height: 2.75rem;
+    padding: 0.75rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .conversion-type-selector {
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .type-button {
+    min-height: 3rem !important;
+    padding: 0.5rem !important;
+    font-size: 0.6875rem !important;
+  }
+  
+  .type-icon {
+    font-size: 0.875rem;
+  }
+  
+  .type-label {
+    font-size: 0.625rem;
+  }
+  
+  .unit-selectors {
+    gap: 0.5rem;
+  }
+  
+  .unit-selector select {
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    min-height: 2.5rem;
+  }
+  
+  .unit-selector label {
+    font-size: 0.8125rem;
+  }
+  
+  .swap-button {
+    padding: 0.625rem 0.875rem !important;
+    font-size: 1rem !important;
+  }
+  
+  .result-display {
+    padding: 0.875rem;
+  }
+  
+  .result-value {
+    font-size: 1rem;
+  }
+  
+  .converter-keypad {
+    gap: 0.5rem;
+  }
+  
+  .converter-calculator .calc-button {
+    font-size: 0.75rem;
+    min-height: 2.5rem;
+    padding: 0.625rem;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 480px) {
+  .conversion-type-selector {
+    margin-bottom: 0.625rem;
+    gap: 0.375rem;
+  }
+  
+  .type-button {
+    min-height: 2.75rem !important;
+    padding: 0.5rem !important;
+  }
+  
+  .unit-selectors {
+    gap: 0.5rem;
+  }
+  
+  .unit-selector select {
+    padding: 0.5rem;
+    min-height: 2.5rem;
+  }
+  
+  .result-display {
+    padding: 0.75rem;
+  }
+  
+  .converter-keypad {
+    gap: 0.4375rem;
+  }
+  
+  .converter-calculator .calc-button {
+    font-size: 0.75rem;
+    min-height: 2.25rem;
+    padding: 0.5rem;
+  }
+}
+
+/* Landscape mode optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .conversion-type-selector {
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 0.5rem;
+    gap: 0.25rem;
+  }
+  
+  .type-button {
+    min-height: 2.5rem !important;
+    padding: 0.375rem !important;
+    font-size: 0.625rem !important;
+    flex-direction: row;
+    gap: 0.25rem;
+  }
+  
+  .type-icon {
+    font-size: 0.75rem;
+  }
+  
+  .type-label {
+    font-size: 0.5625rem;
+  }
+  
+  .unit-selectors {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.5rem;
+  }
+  
+  .swap-button {
+    order: initial;
+    justify-self: center;
+    padding: 0.5rem !important;
+    font-size: 1rem !important;
+    min-height: 2.5rem !important;
+    width: 2.5rem !important;
+  }
+  
+  .unit-selector select {
+    min-height: 2.5rem;
+    padding: 0.5rem;
+  }
+  
+  .result-display {
+    padding: 0.5rem;
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .converter-keypad {
+    gap: 0.375rem;
+  }
+  
+  .converter-calculator .calc-button {
+    font-size: 0.6875rem;
+    min-height: 2rem;
+    padding: 0.375rem;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .type-button {
+    min-height: 44px !important;
+    min-width: 44px;
+  }
+  
+  .unit-selector select {
+    min-height: 44px;
+  }
+  
+  .swap-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  
+  .converter-calculator .calc-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .type-button:hover {
+    transform: none;
+  }
+  
+  .swap-button:hover {
+    transform: none !important;
+  }
+  
+  .converter-calculator .calc-button:hover {
+    transform: none;
+  }
+  
+  .type-button:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Very small screens */
+@media (max-width: 280px) {
+  .type-button {
+    padding: 0.375rem !important;
+  }
+  
+  .type-label {
+    display: none; /* Hide labels on very small screens */
+  }
+  
+  .unit-selector label {
+    font-size: 0.75rem;
+  }
+  
+  .unit-selector select {
+    font-size: 0.6875rem;
+    padding: 0.375rem;
+  }
+  
+  .result-value {
+    font-size: 0.875rem;
+  }
+  
+  .converter-calculator .calc-button {
+    font-size: 0.6875rem;
+    min-height: 2.25rem;
+    padding: 0.375rem 0.25rem;
+  }
+}
+
+/* Animation for type switching */
+@keyframes converterTypeSwitch {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.unit-selectors {
+  animation: converterTypeSwitch 0.3s ease;
+}
+
+/* Loading state animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.result-value:has-text("Loading") {
+  animation: pulse 1s infinite;
+}
+
+/* Dark mode enhancements */
+[data-theme="dark"] .unit-selector select {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .unit-selector select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+} 

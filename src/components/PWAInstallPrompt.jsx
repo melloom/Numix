@@ -1,158 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import InstallIcon from './icons/InstallIcon';
-import SparkleIcon from './icons/SparkleIcon';
+import React, { useState, useEffect } from 'react'
+import { pwaManager } from '../utils/localStorage'
+import './PWAInstallPrompt.css'
 
 const PWAInstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [showPrompt, setShowPrompt] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
-    // Detect mobile device
-    const checkMobile = () => {
-      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobile(mobile);
-      console.log('Mobile device detected:', mobile);
-      console.log('User agent:', navigator.userAgent);
-      return mobile;
-    };
-
-    const isMobileDevice = checkMobile();
-
-    const handleBeforeInstallPrompt = (e) => {
-      // Prevent the mini-infobar from appearing on mobile
-      e.preventDefault();
-      // Save the event so it can be triggered later
-      setDeferredPrompt(e);
-      // Show the install prompt
-      setShowInstallPrompt(true);
-      console.log('PWA install prompt ready');
-    };
-
-    const handleAppInstalled = () => {
-      console.log('PWA was installed');
-      setShowInstallPrompt(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    // Listen for test force prompt
-    const handleForcePWAPrompt = () => {
-      console.log('Force PWA prompt triggered');
-      setShowInstallPrompt(true);
-    };
-    
-    window.addEventListener('force-pwa-prompt', handleForcePWAPrompt);
-
-    // For mobile devices, show install prompt after a delay if not dismissed recently
-    if (isMobileDevice) {
-      const dismissed = localStorage.getItem('pwa-install-dismissed');
-      const dismissedTime = dismissed ? parseInt(dismissed) : 0;
-      const oneDay = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-      
-      console.log('Mobile device - checking dismiss status:', { dismissed, dismissedTime });
-      
-      if (!dismissed || Date.now() - dismissedTime > oneDay) {
-        console.log('Scheduling mobile PWA prompt in 3 seconds...');
-        setTimeout(() => {
-          // Force show prompt on mobile for testing
-          setShowInstallPrompt(true);
-          console.log('Showing mobile PWA prompt NOW');
-        }, 3000); // Show after 3 seconds on mobile
-      } else {
-        console.log('PWA prompt dismissed recently, not showing');
+    // Check if app is already installed
+    const checkInstalled = () => {
+      if (window.matchMedia('(display-mode: standalone)').matches || 
+          window.navigator.standalone === true) {
+        setIsInstalled(true)
+        return
       }
     }
+
+    checkInstalled()
+
+    // Handle the beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      
+      // Use the utility to check if prompt should be shown
+      if (pwaManager.shouldShowPrompt()) {
+        setTimeout(() => {
+          setShowPrompt(true)
+          pwaManager.setLastShown()
+          
+          // Auto-hide after 5 seconds
+          setTimeout(() => {
+            setShowPrompt(false)
+          }, 5000)
+        }, 2000) // Show after 2 seconds delay
+      }
+    }
+
+    // Handle app installed event
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setShowPrompt(false)
+      setDeferredPrompt(null)
+      // Clear PWA prompt data when installed
+      pwaManager.setDismissed(false)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-      window.removeEventListener('force-pwa-prompt', handleForcePWAPrompt);
-    };
-  }, []);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      // Show the install prompt
-      deferredPrompt.prompt();
+    if (!deferredPrompt) return
+
+    try {
+      const result = await deferredPrompt.prompt()
+      console.log('Install result:', result)
       
-      // Wait for the user to respond to the prompt
-      const { outcome } = await deferredPrompt.userChoice;
-      
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      } else {
-        console.log('User dismissed the install prompt');
+      if (result.outcome === 'accepted') {
+        setIsInstalled(true)
       }
       
-      // Clear the deferred prompt
-      setDeferredPrompt(null);
-      setShowInstallPrompt(false);
-    } else if (isMobile) {
-      // For mobile devices without native prompt, show instructions
-      alert('To install this app:\n\n• Safari (iOS): Tap Share → Add to Home Screen\n• Chrome (Android): Tap Menu → Install App or Add to Home Screen');
-      setShowInstallPrompt(false);
+      setDeferredPrompt(null)
+      setShowPrompt(false)
+    } catch (error) {
+      console.error('Error showing install prompt:', error)
     }
-  };
+  }
 
   const handleDismiss = () => {
-    setShowInstallPrompt(false);
-    // Store in localStorage to not show again for a while
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-  };
+    setShowPrompt(false)
+    pwaManager.setDismissed(true)
+  }
 
-  // Don't show if recently dismissed (except for forced mobile show)
-  useEffect(() => {
-    if (!isMobile) {
-      const dismissed = localStorage.getItem('pwa-install-dismissed');
-      if (dismissed) {
-        const dismissedTime = parseInt(dismissed);
-        const oneWeek = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
-        if (Date.now() - dismissedTime < oneWeek) {
-          setShowInstallPrompt(false);
-        }
-      }
-    }
-  }, [isMobile]);
+  const handleLater = () => {
+    setShowPrompt(false)
+  }
 
-  if (!showInstallPrompt) {
-    return null;
+  if (isInstalled || !showPrompt || !deferredPrompt) {
+    return null
   }
 
   return (
     <div className="pwa-install-prompt">
       <div className="pwa-install-content">
-        <div className="pwa-install-icon-container">
-          <InstallIcon size={isMobile ? 28 : 32} className="pwa-install-main-icon" />
-          <SparkleIcon size={14} className="pwa-sparkle-1" />
-          <SparkleIcon size={10} className="pwa-sparkle-2" />
-          <SparkleIcon size={12} className="pwa-sparkle-3" />
-        </div>
+        <div className="pwa-install-icon">📱</div>
         <div className="pwa-install-text">
-          <h3>
-            Install Numix 
-            <SparkleIcon size={16} className="pwa-title-sparkle" />
-          </h3>
-          <p>{isMobile ? 'Add to your home screen for quick access!' : 'Get the full app experience with offline access, faster loading, and native app features!'}</p>
+          <h3>Install Numix Calculator</h3>
+          <p>Get quick access and offline functionality</p>
         </div>
-        <div className="pwa-install-buttons">
-          <button onClick={handleInstallClick} className="pwa-install-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7,10 12,15 17,10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            {isMobile ? 'Add to Home' : 'Install App'}
+        <div className="pwa-install-actions">
+          <button 
+            className="pwa-install-btn pwa-install-btn--primary"
+            onClick={handleInstallClick}
+          >
+            Install
           </button>
-          <button onClick={handleDismiss} className="pwa-dismiss-btn">
-            {isMobile ? 'Not Now' : 'Maybe Later'}
+          <button 
+            className="pwa-install-btn pwa-install-btn--secondary"
+            onClick={handleLater}
+          >
+            Later
+          </button>
+          <button 
+            className="pwa-install-btn pwa-install-btn--close"
+            onClick={handleDismiss}
+            aria-label="Dismiss"
+          >
+            ×
           </button>
         </div>
       </div>
+      <div className="pwa-install-progress"></div>
     </div>
-  );
-};
+  )
+}
 
-export default PWAInstallPrompt; 
+export default PWAInstallPrompt 

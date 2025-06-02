@@ -1,0 +1,23 @@
+.programmer-calculator {
+  width: 100%;
+}
+
+.base-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.programmer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  animation: slideIn 0.3s ease 0.2s both;
+}
+
+@media (max-width: 480px) {
+  .programmer-grid {
+    gap: 0.625rem;
+  }
+} 

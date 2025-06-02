@@ -1,20 +1,16 @@
 import React, { useEffect } from "react";
-import Calculator from "./components/Calculator";
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import PWAFloatingInstall from "./components/PWAFloatingInstall";
-import iOSInstallBanner from "./components/iOSInstallBanner";
-import "./App.css";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import CalculatorApp from "./components/CalculatorApp";
+import "./styles/App.css";
 
 function App() {
-  // Add event listener for iOS viewport height fix
+  // iOS viewport height fix for better mobile experience
   useEffect(() => {
-    // Fix for iOS Safari 100vh issue
     const setVh = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
     
-    // Set on initial load and resize
     setVh();
     window.addEventListener('resize', setVh);
     window.addEventListener('orientationchange', setVh);
@@ -26,12 +22,11 @@ function App() {
   }, []);
 
   return (
-    <div className="app-bg">
-      <iOSInstallBanner />
-      <Calculator />
-      <PWAInstallPrompt />
-      <PWAFloatingInstall />
-    </div>
+    <ThemeProvider>
+      <div className="app">
+        <CalculatorApp />
+      </div>
+    </ThemeProvider>
   );
 }
 

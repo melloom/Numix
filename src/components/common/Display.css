@@ -1,0 +1,173 @@
+.display {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: right;
+  position: relative;
+  overflow: hidden;
+}
+
+.display::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(59, 130, 246, 0.05) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+.display-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.display-sub {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
+.display-main {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--text-primary);
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  word-wrap: break-word;
+  word-break: break-all;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  position: relative;
+  z-index: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .display {
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-radius: 12px;
+  }
+  
+  .display-main {
+    font-size: 2rem;
+    min-height: 2.5rem;
+    /* Better text scaling for mobile */
+    font-size: clamp(1.5rem, 8vw, 2rem);
+  }
+  
+  .display-label {
+    font-size: 0.6875rem;
+  }
+  
+  .display-sub {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .display {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+  }
+  
+  .display-main {
+    font-size: clamp(1.25rem, 7vw, 1.75rem);
+    min-height: 2rem;
+  }
+  
+  .display-label {
+    font-size: 0.625rem;
+  }
+  
+  .display-sub {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 480px) {
+  .display {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .display-main {
+    font-size: clamp(1.25rem, 6vw, 1.75rem);
+    min-height: 2rem;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .display {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .display-main {
+    font-size: clamp(1rem, 5vw, 1.5rem);
+    min-height: 1.5rem;
+  }
+  
+  .display-label {
+    font-size: 0.625rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .display-sub {
+    font-size: 0.6875rem;
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  .display:hover .display-main {
+    /* Disable hover effects on touch devices */
+    color: var(--text-primary);
+  }
+  
+  .display {
+    /* Prevent accidental selection on touch */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Better readability for small text */
+@media (max-width: 375px) {
+  .display-main {
+    /* Ensure minimum readable size */
+    font-size: clamp(1.125rem, 6vw, 1.5rem);
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Animation for value changes */
+.display-main {
+  transition: color 0.2s ease;
+}
+
+.display:hover .display-main {
+  color: var(--accent-primary);
+}
+
+/* Error state */
+.display.error .display-main {
+  color: var(--accent-danger);
+  animation: pulse 0.5s ease;
+} 
