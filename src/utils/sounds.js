@@ -11,6 +11,7 @@ class SoundManager {
     this.audioElements = []
     this.currentIndex = 0
     this.audioContext = null
+    this.isUnlocking = false
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
@@ -61,21 +62,27 @@ class SoundManager {
     const events = ['touchstart', 'touchend', 'click', 'mousedown']
     
     const unlock = () => {
-      if (this.hasUserInteracted) return
+      if (this.hasUserInteracted || this.isUnlocking) return
       this.hasUserInteracted = true
+      this.isUnlocking = true
       
       // Resume audio context if available
       if (this.audioContext && this.audioContext.state === 'suspended') {
         this.audioContext.resume()
       }
       
-      // Try to unlock all audio elements
+      // Try to unlock all audio elements silently
       this.audioElements.forEach((audio) => {
         audio.play().then(() => {
           audio.pause()
           audio.currentTime = 0
         }).catch(() => {})
       })
+      
+      // Set unlocking to false after a short delay
+      setTimeout(() => {
+        this.isUnlocking = false
+      }, 100)
       
       // Remove listeners
       events.forEach(eventType => {
@@ -94,7 +101,7 @@ class SoundManager {
   }
 
   playSound() {
-    if (!this.isEnabled || !this.initialized) return
+    if (!this.isEnabled || !this.initialized || this.isUnlocking) return
     
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
@@ -135,8 +142,10 @@ class SoundManager {
         this.audioContext.resume()
       }
       
-      // Test sound
-      setTimeout(() => this.playSound(), 100)
+      // Test sound only if not unlocking
+      if (!this.isUnlocking) {
+        setTimeout(() => this.playSound(), 100)
+      }
     }
   }
 
@@ -157,16 +166,19 @@ class SoundManager {
   }
 
   handleUserInteraction() {
-    if (!this.hasUserInteracted) {
+    if (!this.hasUserInteracted && !this.isUnlocking) {
       this.hasUserInteracted = true
+      this.isUnlocking = true
       
       // Resume audio context if suspended
       if (this.audioContext && this.audioContext.state === 'suspended') {
         this.audioContext.resume()
       }
       
-      // Try to play a sound
-      this.playSound()
+      // Set unlocking to false after a short delay
+      setTimeout(() => {
+        this.isUnlocking = false
+      }, 100)
     }
   }
 }
