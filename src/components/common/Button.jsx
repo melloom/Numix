@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled } from '../../utils/sounds'
+import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled, forceMobileAudioInit } from '../../utils/sounds'
 import './Button.css'
 
 const Button = ({ 
@@ -27,6 +27,9 @@ const Button = ({
   const handleClick = useCallback((e) => {
     if (disabled) return
     
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
     // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
     
@@ -47,6 +50,9 @@ const Button = ({
   const handleMouseEnter = useCallback(() => {
     if (disabled) return
     
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
     // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
     
@@ -61,6 +67,9 @@ const Button = ({
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
+    
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
     
     // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
@@ -81,8 +90,13 @@ const Button = ({
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
     // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
+    
+    // Resume audio context - INSTANT
     resumeAudio()
     
     if (onTouchStart) {
