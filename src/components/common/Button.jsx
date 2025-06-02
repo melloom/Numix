@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { playButtonClick, isSoundEnabled, handleUserInteraction } from '../../utils/sounds'
+import { playButtonClick, playButtonHover, resumeAudio, handleUserInteraction, isSoundEnabled, forceMobileAudioInit } from '../../utils/sounds'
 import './Button.css'
 
 const Button = ({ 
@@ -27,22 +27,51 @@ const Button = ({
   const handleClick = useCallback((e) => {
     if (disabled) return
     
-    // PRIORITY 1: Process the click immediately
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
+    
+    // Resume audio context - INSTANT
+    resumeAudio()
+    
+    // Play click sound - INSTANT, no await
+    if (enableSound) {
+      playButtonClick()
+    }
+    
+    // Call the original onClick handler
     if (onClick) {
       onClick(e)
     }
-    
-    // PRIORITY 2: Sound effects (non-blocking)
-    if (enableSound) {
-      // Single sound call - ultra fast
-      playButtonClick()
-    }
   }, [onClick, disabled, enableSound])
+
+  const handleMouseEnter = useCallback(() => {
+    if (disabled) return
+    
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
+    handleUserInteraction()
+    
+    // Resume audio context - INSTANT  
+    resumeAudio()
+    
+    // Play subtle hover sound - INSTANT, no await
+    if (enableSound) {
+      playButtonHover()
+    }
+  }, [disabled, enableSound])
 
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    // Minimal user interaction handling for audio unlock
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
     
     if (onMouseDown) {
@@ -61,8 +90,14 @@ const Button = ({
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    // Minimal user interaction handling for audio unlock
+    // Force mobile audio init - INSTANT
+    forceMobileAudioInit()
+    
+    // Handle user interaction for mobile/PWA audio - INSTANT
     handleUserInteraction()
+    
+    // Resume audio context - INSTANT
+    resumeAudio()
     
     if (onTouchStart) {
       onTouchStart(e)
@@ -81,6 +116,7 @@ const Button = ({
     <button
       className={buttonClass}
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onTouchStart={handleTouchStart}
