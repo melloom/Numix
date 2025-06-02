@@ -1,4 +1,4 @@
-// High-performance sound system for rapid clicking and fast typing
+// Robust sound system for PWA - prevents audio elements from getting stuck
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
@@ -13,9 +13,6 @@ class SoundManager {
     this.audioContext = null
     this.isUnlocking = false
     this.clickCount = 0
-    this.lastPlayTime = 0
-    this.playQueue = []
-    this.isProcessingQueue = false
     
     // Use the specific sound file
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
@@ -41,32 +38,22 @@ class SoundManager {
   }
 
   createAudio() {
-    // Create 15 audio elements for ultra-rapid clicking support
-    for (let i = 0; i < 15; i++) {
+    // Create 10 audio elements for better reliability
+    for (let i = 0; i < 10; i++) {
       const audio = new Audio()
       audio.src = this.soundFile
       audio.volume = 0.8
       audio.preload = 'auto'
       
-      // Optimize for rapid playback
-      audio.loop = false
-      audio.muted = false
-      
       // Add error handling
       audio.addEventListener('error', () => {
         // Recreate this audio element if it errors
-        setTimeout(() => this.recreateAudioElement(i), 50)
+        setTimeout(() => this.recreateAudioElement(i), 100)
       })
       
       // Reset audio when it ends
       audio.addEventListener('ended', () => {
         audio.currentTime = 0
-        audio.pause()
-      })
-      
-      // Handle loading states
-      audio.addEventListener('canplaythrough', () => {
-        // Audio is ready for rapid playback
       })
       
       // Load the audio
@@ -89,16 +76,13 @@ class SoundManager {
       audio.src = this.soundFile
       audio.volume = 0.8
       audio.preload = 'auto'
-      audio.loop = false
-      audio.muted = false
       
       audio.addEventListener('error', () => {
-        setTimeout(() => this.recreateAudioElement(index), 50)
+        setTimeout(() => this.recreateAudioElement(index), 100)
       })
       
       audio.addEventListener('ended', () => {
         audio.currentTime = 0
-        audio.pause()
       })
       
       audio.load()
@@ -119,20 +103,19 @@ class SoundManager {
         this.audioContext.resume()
       }
       
-      // Try to unlock multiple audio elements silently for rapid playback
-      const unlockPromises = this.audioElements.slice(0, 3).map(audio => {
-        return audio.play().then(() => {
-          audio.pause()
-          audio.currentTime = 0
+      // Try to unlock only the first audio element silently
+      const firstAudio = this.audioElements[0]
+      if (firstAudio) {
+        firstAudio.play().then(() => {
+          firstAudio.pause()
+          firstAudio.currentTime = 0
         }).catch(() => {})
-      })
+      }
       
-      Promise.all(unlockPromises).finally(() => {
-        // Set unlocking to false after unlocking
-        setTimeout(() => {
-          this.isUnlocking = false
-        }, 50)
-      })
+      // Set unlocking to false after a short delay
+      setTimeout(() => {
+        this.isUnlocking = false
+      }, 100)
       
       // Remove listeners
       events.forEach(eventType => {
@@ -153,76 +136,61 @@ class SoundManager {
   playSound() {
     if (!this.isEnabled || !this.initialized || this.isUnlocking) return
     
-    const now = performance.now()
     this.clickCount++
-    this.lastPlayTime = now
     
     // Resume audio context if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume()
     }
     
-    // Reset all audio elements every 50 clicks to prevent stuck state
-    if (this.clickCount % 50 === 0) {
+    // Reset all audio elements every 20 clicks to prevent stuck state
+    if (this.clickCount % 20 === 0) {
       this.resetAllAudio()
     }
     
-    // Find the best available audio element
-    const audio = this.findAvailableAudio()
+    // Try up to 3 different audio elements
+    let attempts = 0
+    let played = false
     
-    if (audio) {
-      try {
-        // Stop and reset current audio immediately
-        audio.pause()
-        audio.currentTime = 0
-        
-        // Play immediately without waiting for promises
-        const playPromise = audio.play()
-        if (playPromise) {
-          playPromise.catch(() => {
-            // Silent fail - find next available audio
-            const backupAudio = this.findAvailableAudio()
-            if (backupAudio && backupAudio !== audio) {
-              backupAudio.pause()
-              backupAudio.currentTime = 0
-              backupAudio.play().catch(() => {})
-            }
-          })
-        }
-      } catch (e) {
-        // Try backup audio element
-        const backupAudio = this.findAvailableAudio()
-        if (backupAudio && backupAudio !== audio) {
-          try {
-            backupAudio.pause()
-            backupAudio.currentTime = 0
-            backupAudio.play().catch(() => {})
-          } catch (backupError) {
-            // Silent fail
+    while (!played && attempts < 3) {
+      const audio = this.audioElements[this.currentIndex]
+      this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
+      
+      if (audio && audio.readyState >= 1) { // HAVE_METADATA or better
+        try {
+          // Stop and reset current audio
+          audio.pause()
+          audio.currentTime = 0
+          
+          // Play immediately
+          const playPromise = audio.play()
+          if (playPromise) {
+            playPromise.then(() => {
+              played = true
+            }).catch(() => {
+              // Try next audio element
+              attempts++
+            })
+          } else {
+            played = true
           }
+        } catch (e) {
+          attempts++
         }
+      } else {
+        attempts++
       }
     }
     
-    // Always vibrate on mobile as immediate feedback
+    // If all attempts failed, recreate audio elements
+    if (!played) {
+      setTimeout(() => this.recreateAllAudio(), 50)
+    }
+    
+    // Always vibrate on mobile as feedback
     if (this.isMobile && navigator.vibrate) {
-      navigator.vibrate(6) // Shorter vibration for rapid clicks
+      navigator.vibrate(8)
     }
-  }
-
-  findAvailableAudio() {
-    // First try to find a paused/ended audio element
-    for (let i = 0; i < this.audioElements.length; i++) {
-      const audio = this.audioElements[i]
-      if (audio.paused || audio.ended || audio.currentTime === 0) {
-        return audio
-      }
-    }
-    
-    // If all are playing, use round-robin selection
-    const audio = this.audioElements[this.currentIndex]
-    this.currentIndex = (this.currentIndex + 1) % this.audioElements.length
-    return audio
   }
 
   resetAllAudio() {
@@ -230,7 +198,6 @@ class SoundManager {
       try {
         audio.pause()
         audio.currentTime = 0
-        // Reload to ensure fresh state
         audio.load()
       } catch (e) {
         // Ignore errors during reset
@@ -241,7 +208,7 @@ class SoundManager {
   recreateAllAudio() {
     // Recreate all audio elements if they get stuck
     for (let i = 0; i < this.audioElements.length; i++) {
-      setTimeout(() => this.recreateAudioElement(i), i * 10) // Stagger recreation
+      this.recreateAudioElement(i)
     }
   }
 
@@ -291,7 +258,7 @@ class SoundManager {
       // Set unlocking to false after a short delay
       setTimeout(() => {
         this.isUnlocking = false
-      }, 50)
+      }, 100)
     }
   }
 }
