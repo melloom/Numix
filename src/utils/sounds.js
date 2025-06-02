@@ -1,17 +1,17 @@
-// Ultra-simple sound system - lightweight and crash-proof
+// Single-audio sound system - prevents multiple sounds completely
 import { settingsManager } from './localStorage'
 import { isMobileDevice } from './mobileUtils'
 
-class SimpleSoundManager {
+class SingleSoundManager {
   constructor() {
     this.isEnabled = false
     this.hasUserInteracted = false
     this.isMobile = isMobileDevice()
     this.audio = null
-    this.backupAudio = null
-    this.isPlaying = false
+    this.isCurrentlyPlaying = false
     this.lastPlayTime = 0
     this.soundFile = '/assets/ui-pop-sound-316482.mp3'
+    this.isLocked = false
     
     this.init()
   }
@@ -22,77 +22,67 @@ class SimpleSoundManager {
       this.isEnabled = settings.soundEnabled
       
       if (this.isEnabled) {
-        this.createSimpleAudio()
-        this.setupOneTimeListener()
+        this.createSingleAudio()
+        this.setupUnlockListener()
       }
     } catch (error) {
-      console.warn('Sound init failed (continuing silently)')
+      console.warn('Sound init failed silently')
       this.isEnabled = false
     }
   }
 
-  createSimpleAudio() {
+  createSingleAudio() {
     try {
-      // Create only 2 audio elements - main and backup
+      // Create only ONE audio element
       this.audio = new Audio()
       this.audio.src = this.soundFile
       this.audio.volume = 0.8
       this.audio.preload = 'none'
       this.audio.muted = true
       
-      this.backupAudio = new Audio()
-      this.backupAudio.src = this.soundFile
-      this.backupAudio.volume = 0.8
-      this.backupAudio.preload = 'none'
-      this.backupAudio.muted = true
-      
-      // Simple event handlers
+      // Critical: prevent multiple plays
       this.audio.addEventListener('ended', () => {
-        this.isPlaying = false
-        this.audio.currentTime = 0
+        this.isCurrentlyPlaying = false
+        this.isLocked = false
+        try {
+          this.audio.currentTime = 0
+        } catch (e) {}
       })
       
-      this.backupAudio.addEventListener('ended', () => {
-        this.isPlaying = false
-        this.backupAudio.currentTime = 0
-      })
-      
-      // Error handlers that don't recreate
       this.audio.addEventListener('error', () => {
-        this.isPlaying = false
+        this.isCurrentlyPlaying = false
+        this.isLocked = false
       })
       
-      this.backupAudio.addEventListener('error', () => {
-        this.isPlaying = false
+      // Important: stop any previous play attempts
+      this.audio.addEventListener('play', () => {
+        this.isCurrentlyPlaying = true
+      })
+      
+      this.audio.addEventListener('pause', () => {
+        this.isCurrentlyPlaying = false
+        this.isLocked = false
       })
       
     } catch (error) {
-      console.warn('Audio creation failed (continuing silently)')
+      console.warn('Audio creation failed silently')
       this.audio = null
-      this.backupAudio = null
     }
   }
 
-  setupOneTimeListener() {
+  setupUnlockListener() {
     const unlock = () => {
       if (this.hasUserInteracted) return
       this.hasUserInteracted = true
       
       try {
-        // Simple unlock - just unmute
         if (this.audio) {
           this.audio.muted = false
           this.audio.preload = 'auto'
         }
-        if (this.backupAudio) {
-          this.backupAudio.muted = false
-          this.backupAudio.preload = 'auto'
-        }
-      } catch (e) {
-        // Ignore unlock errors
-      }
+      } catch (e) {}
       
-      // Remove listener
+      // Remove listeners immediately
       document.removeEventListener('touchstart', unlock, true)
       document.removeEventListener('click', unlock, true)
     }
@@ -102,60 +92,63 @@ class SimpleSoundManager {
   }
 
   playSound() {
-    // Rate limit to prevent spam
+    // ULTRA STRICT: Multiple checks to prevent overlapping
     const now = Date.now()
-    if (now - this.lastPlayTime < 50) return // 50ms minimum between sounds
     
-    if (!this.isEnabled || !this.hasUserInteracted || this.isPlaying) return
+    // Rate limit: minimum 100ms between sounds
+    if (now - this.lastPlayTime < 100) return
+    
+    // Check if locked, playing, or not ready
+    if (this.isLocked || this.isCurrentlyPlaying || !this.isEnabled || !this.hasUserInteracted) return
+    
+    // Check if audio exists and is ready
+    if (!this.audio || this.audio.readyState < 2) return
     
     try {
+      // LOCK immediately to prevent any other plays
+      this.isLocked = true
       this.lastPlayTime = now
-      this.isPlaying = true
       
-      // Try main audio first
-      if (this.audio && this.audio.readyState >= 2) {
-        this.audio.currentTime = 0
-        this.audio.play().then(() => {
-          // Success
+      // Force stop any current playback
+      this.audio.pause()
+      this.audio.currentTime = 0
+      
+      // Play with immediate handling
+      const playPromise = this.audio.play()
+      
+      if (playPromise) {
+        playPromise.then(() => {
+          // Success - keep locked until ended
         }).catch(() => {
-          // Try backup audio
-          this.tryBackupAudio()
+          // Failed - unlock immediately
+          this.isLocked = false
+          this.isCurrentlyPlaying = false
         })
-      } else {
-        this.tryBackupAudio()
       }
       
-      // Mobile vibration as backup
-      if (this.isMobile && navigator.vibrate) {
-        navigator.vibrate(8)
-      }
-      
-      // Auto-reset playing flag in case audio doesn't fire ended event
+      // Safety timeout to unlock if something goes wrong
       setTimeout(() => {
-        this.isPlaying = false
-      }, 200)
+        if (this.isLocked && !this.isCurrentlyPlaying) {
+          this.isLocked = false
+        }
+      }, 500) // Max 500ms lock
+      
+      // Mobile vibration as backup feedback
+      if (this.isMobile && navigator.vibrate) {
+        try {
+          navigator.vibrate(8)
+        } catch (e) {}
+      }
       
     } catch (error) {
-      this.isPlaying = false
+      // Always unlock on error
+      this.isLocked = false
+      this.isCurrentlyPlaying = false
+      
       // Mobile vibration as fallback
       if (this.isMobile && navigator.vibrate) {
         try { navigator.vibrate(8) } catch (e) {}
       }
-    }
-  }
-
-  tryBackupAudio() {
-    try {
-      if (this.backupAudio && this.backupAudio.readyState >= 2) {
-        this.backupAudio.currentTime = 0
-        this.backupAudio.play().catch(() => {
-          this.isPlaying = false
-        })
-      } else {
-        this.isPlaying = false
-      }
-    } catch (e) {
-      this.isPlaying = false
     }
   }
 
@@ -164,12 +157,11 @@ class SimpleSoundManager {
       this.isEnabled = enabled
       settingsManager.updateSettings({ soundEnabled: enabled })
       
-      if (enabled) {
-        if (!this.audio) {
-          this.createSimpleAudio()
-        }
-        // Don't auto-play test sound - wait for user action
+      if (enabled && !this.audio) {
+        this.createSingleAudio()
       }
+      
+      // Never auto-play test sounds
     } catch (error) {
       // Ignore errors
     }
@@ -179,7 +171,7 @@ class SimpleSoundManager {
     return this.isEnabled
   }
 
-  // All play methods use the same simple playSound
+  // All play methods use the same restrictive playSound
   playClick() { this.playSound() }
   playSuccess() { this.playSound() }
   playError() { this.playSound() }
@@ -192,39 +184,36 @@ class SimpleSoundManager {
           this.audio.muted = false
           this.audio.preload = 'auto'
         }
-        if (this.backupAudio) {
-          this.backupAudio.muted = false
-          this.backupAudio.preload = 'auto'
-        }
-      } catch (e) {
-        // Ignore errors
-      }
+      } catch (e) {}
     }
   }
 
-  // Cleanup method
-  destroy() {
+  // Force stop all sounds
+  stopAllSounds() {
     try {
       if (this.audio) {
         this.audio.pause()
-        this.audio = null
+        this.audio.currentTime = 0
       }
-      if (this.backupAudio) {
-        this.backupAudio.pause()
-        this.backupAudio = null
-      }
-    } catch (e) {
-      // Ignore cleanup errors
-    }
+      this.isCurrentlyPlaying = false
+      this.isLocked = false
+    } catch (e) {}
+  }
+
+  // Cleanup
+  destroy() {
+    try {
+      this.stopAllSounds()
+      this.audio = null
+    } catch (e) {}
   }
 }
 
-// Create single instance
+// Create single instance with fallback
 let soundManager
 try {
-  soundManager = new SimpleSoundManager()
+  soundManager = new SingleSoundManager()
 } catch (error) {
-  // Fallback object if creation fails
   soundManager = {
     playClick: () => {},
     playSuccess: () => {},
@@ -232,11 +221,12 @@ try {
     setEnabled: () => {},
     isAudioEnabled: () => false,
     handleUserInteraction: () => {},
+    stopAllSounds: () => {},
     destroy: () => {}
   }
 }
 
-// Simple exports
+// Ultra-safe exports
 export const playButtonClick = () => {
   try { soundManager.playClick() } catch (e) {}
 }
@@ -269,6 +259,11 @@ export const resumeAudio = () => {
 
 export const forceMobileAudioInit = () => {
   try { soundManager.handleUserInteraction() } catch (e) {}
+}
+
+// Emergency stop function
+export const stopAllSounds = () => {
+  try { soundManager.stopAllSounds() } catch (e) {}
 }
 
 export default soundManager 
