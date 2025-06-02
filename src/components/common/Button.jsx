@@ -39,29 +39,19 @@ const Button = ({
     
     const now = Date.now()
     
-    console.log('Button clicked:', { 
-      disabled, 
-      enableSound, 
-      soundDisabled,
-      timeSinceLastClick: now - lastClickTime.current 
-    })
-    
     // Ultra-aggressive debouncing
     if (now - lastClickTime.current < debounceMs) {
-      console.log('Click debounced')
       return
     }
     
     // Prevent re-entry during processing
     if (isProcessing.current) {
-      console.log('Already processing click')
       return
     }
     
     // Track rapid clicks and block if too many
     clickCount.current++
     if (clickCount.current > 3) {
-      console.log('Too many rapid clicks, blocking')
       // Reset click count after a longer delay
       setTimeout(() => {
         clickCount.current = 0
@@ -78,32 +68,39 @@ const Button = ({
     }, 300)
     
     try {
-      console.log('Processing button click...')
+      // Emergency stop any existing audio first
+      emergencyStopAudio()
       
-      // AGGRESSIVE mobile audio initialization
+      // Force mobile audio init - INSTANT
       forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
       handleUserInteraction()
+      
+      // Resume audio context - INSTANT
       resumeAudio()
       
-      // Try to play sound immediately for better responsiveness
-      if (enableSound && !disabled) {
-        console.log('Attempting to play click sound')
-        playButtonClick()
-      }
+      // Small delay before playing sound to ensure cleanup
+      setTimeout(() => {
+        if (enableSound && !disabled) {
+          playButtonClick()
+        }
+      }, 10)
       
-      // Call the original onClick handler immediately (no delay)
-      if (onClick && !disabled) {
-        console.log('Calling onClick handler')
-        onClick(e)
-      }
+      // Call the original onClick handler with delay to prevent conflicts
+      setTimeout(() => {
+        if (onClick && !disabled) {
+          onClick(e)
+        }
+      }, 15)
       
     } catch (error) {
       console.warn('Button click error:', error)
     } finally {
-      // Release processing lock after a shorter delay
+      // Release processing lock after a delay
       setTimeout(() => {
         isProcessing.current = false
-      }, 50)
+      }, 100)
     }
   }, [onClick, disabled, enableSound, debounceMs])
 
@@ -130,17 +127,16 @@ const Button = ({
   const handleMouseDown = useCallback((e) => {
     if (disabled) return
     
-    console.log('Mouse down on button')
-    
     // Prevent defaults more aggressively
     e.preventDefault()
     e.stopPropagation()
     
     try {
-      // AGGRESSIVE audio initialization on mouse down
+      // Force mobile audio init - INSTANT
       forceMobileAudioInit()
+      
+      // Handle user interaction for mobile/PWA audio - INSTANT
       handleUserInteraction()
-      resumeAudio()
       
       if (onMouseDown) {
         onMouseDown(e)
@@ -165,24 +161,20 @@ const Button = ({
   const handleTouchStart = useCallback((e) => {
     if (disabled) return
     
-    console.log('Touch start on button')
-    
     // Prevent defaults even more aggressively on touch
     e.preventDefault()
     e.stopPropagation()
     e.stopImmediatePropagation()
     
     try {
-      // SUPER AGGRESSIVE mobile audio init on touch
+      // Force mobile audio init - INSTANT
       forceMobileAudioInit()
-      handleUserInteraction()
-      resumeAudio()
       
-      // Force another attempt at audio initialization
-      setTimeout(() => {
-        forceMobileAudioInit()
-        handleUserInteraction()
-      }, 10)
+      // Handle user interaction for mobile/PWA audio - INSTANT
+      handleUserInteraction()
+      
+      // Resume audio context - INSTANT
+      resumeAudio()
       
       if (onTouchStart) {
         onTouchStart(e)
@@ -195,17 +187,11 @@ const Button = ({
   const handleTouchEnd = useCallback((e) => {
     if (disabled) return
     
-    console.log('Touch end on button')
-    
     // Prevent touch end from triggering additional events
     e.preventDefault()
     e.stopPropagation()
     
     try {
-      // One more attempt at audio initialization
-      forceMobileAudioInit()
-      handleUserInteraction()
-      
       if (onTouchEnd) {
         onTouchEnd(e)
       }
